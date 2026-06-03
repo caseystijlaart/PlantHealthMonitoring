@@ -1,0 +1,52 @@
+= Components
+
+The system is composed of several components that work together to monitor plant health and provide feedback to the user.
+To outline each component and their role, an overview is given, see <<Description>>.
+Next to that, a component diagram, <<Diagram>> is given to illustrate the relationships between the components.
+
+[[Description]]
+.Component Description
+[%autowidth]
+|===
+| Component | Description
+
+| Edge Node (EN) | The Edge Node is responsible for receiving sensor data, performing preprocessing and local ML inference, and managing device-specific configuration. 
+It communicates with the central storage to upload measurements and receives configuration during provisioning.
+| Sensor Array (SA)| The sensor array consists of various sensors that monitor the plant's environment, such as soil moisture, temperature, humidity, and light levels. These sensors provide real-time data to the Edge Node.
+| User Interface (UI) | The user interface allows the user to manage plant profiles, view plant health status and historical data, and configure devices. 
+It communicates with the central storage for data access and uses BLE to provision nearby Edge Nodes.                                   
+| Data Storage (DS) | Stores plant profiles, user-defined settings, and historical sensor data. Acts as the central source of truth for the system and enables remote access to plant data. 
+
+
+|===
+
+[[Diagram]]
+.Component Diagram
+image::../images/component-diagram.svg[]
+
+<<<
+
+== Messages Between Components
+To showcase how each component is connected to another, the overall message that connects them are defined, see <<Messages between components>>.
+
+.Messages between components
+|===
+| Component | Message name | From | To | Description
+
+| Sensor Array | GetData() | Edge Node | Sensor Array | Retrieves measured sensor data from the sensor array.
+
+| Edge Node | Send(`data`) | Edge Node | Data Storage | Sends sensor readings and inferred plant health data to the central storage.
+
+| User Interface | AddPlant(`plant_info`) | Interface | Data Storage | Stores a new plant profile with user-defined settings such as soil moisture and light preferences.
+
+| User Interface | GetPlantData(`plant_id`) | Interface | Data Storage | Requests historical and current plant data for visualization.
+
+| User Interface | DisplayHealthStatus(`health_status`) | Data Storage | Interface | Displays plant health status retrieved from stored data.
+
+| User Interface | ProvisionDevice(`settings`) | Interface | Edge Node (BLE) | Sends plant configuration to a nearby available Edge Node via BLE during setup.
+
+| Edge Node | StoreLocalConfig(`settings`) | Edge Node | Edge Node | Stores received configuration locally for autonomous operation.
+
+| User Interface | GetAvailableDevices() | Interface | Edge Node (BLE) | Scans for nearby unassigned Edge Nodes available for provisioning.
+
+|===

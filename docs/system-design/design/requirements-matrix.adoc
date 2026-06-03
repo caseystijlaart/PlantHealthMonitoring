@@ -1,0 +1,36 @@
+= Requirements Matrix
+
+The requirements matrix provides a consolidated view of all the requirements, showing how they relate to each other and to the use cases. This matrix helps ensure that all requirements are covered and that there are no gaps in the system design.
+
+[Use cases vs user requirements coverage]
+.Use Cases vs User Requirements Coverage
+|===
+| | UR_001 | UR_002 | UR_003 | UR_004 | UR_005
+
+| UC01 | X |  |  |  | 
+| UC02 |  | X |  |  | 
+| UC03 |  | X | X |  | 
+| UC04 |  |  |  | X | 
+| UC05 |  |  |  |  | X
+
+|===
+
+[Functional requirements vs user requirements coverage]
+.Functional Requirements vs User Requirements Coverage
+|===
+| | UR_001 | UR_002 | UR_003 | UR_004 | UR_005
+
+| FR_001 | X |  |  |  | 
+| FR_002 | X |  |  |  | 
+| FR_003 |  | X |  |  | 
+| FR_004 |  | X |  |  | 
+| FR_005 |  | X |  |  | 
+| FR_006 |  | X |  |  | 
+| FR_007 |  |  | X |  | 
+| FR_008 |  |  | X |  | 
+| FR_009 |  |  |  | X | 
+| FR_010 |  |  |  | X | 
+| FR_011 |  |  |  |  | X
+| FR_012 |  |  |  |  | X
+
+|===

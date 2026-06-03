@@ -1,0 +1,21 @@
+= Hardware Diagram
+
+The system will be composed of several hardware modules.
+Some logical units run on multiple physical blocks.
+The table, <<Used hardware components>>, describes the individual hardware hardware components.
+The diagram, <<Hardware connection>>, the connection between the various hardware components.
+
+[.table]
+.Used hardware components
+|===
+| Hardware block      | Description
+
+| ESP32      | The ESP32 will be used as the ML unit. 
+It will run the machine learning models and will be responsible for processing the data from the various sensors and making decisions and predictions based upon that data.
+| Environmental Sensors | There are various sensors used to measure data with the help of the ESP32 CP2102.
+| Interface (IF) | The interface is used to display the data and predictions from the ESP32 CP2102. It will also be used to receive user input for certain actions.
+|===
+
+[.figure]
+.Hardware connection
+image::../images/hw-diagram.svg[]

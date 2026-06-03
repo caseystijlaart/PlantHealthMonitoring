@@ -1,0 +1,157 @@
+= Personal Project Dev Board Research : Minor AI for Society
+:numbered:
+:imagesdir: images
+:title-page: true
+:author: Casey Stijlaart
+:docdatetime: datetime (ISO)
+:doctype: report
+:toc:
+:toclevels: 2
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+:xrefstyle: short
+:pdf-theme: default
+:pdf-fontsize: 11
+
+== Document History
+.Document History
+|===
+| Version | Date       | Status | Author        | Description 
+
+| 1.0     | 18-03-2025 | First Version | Casey Stijlaart | Completed version 
+|===
+
+== Introduction
+This document serves as a research report for the development board used in the personal project for the Minor AI for Society course.
+The purpose of this report is to provide an overview of the development board, its specifications, and its suitability for the project at hand.
+
+<<<
+
+== Development Board Overview
+A wide range of development boards are available that support the execution of Artificial Intelligence (AI) and Machine Learning (ML) models. These boards differ significantly in terms of processing power, energy consumption, cost, and scalability, making careful selection essential for the success of the project.
+
+To determine the most suitable development board, several key requirements have been defined based on the project goals:
+
+* *AI and Machine Learning Capability:* The board must be capable of running AI and ML models, at least at a basic level, to enable intelligent data processing.
+* *Low Power Consumption:* As the project focuses on minimalistic and energy-efficient operation, the board should consume as little power as possible, especially when deployed in multiple units.
+* *Cost-effectiveness:* The solution should remain affordable to ensure accessibility and feasibility, particularly when scaling to multiple devices.
+* *Scalability:* The chosen platform should support expansion, allowing for additional nodes, sensors, or increased system complexity in future iterations.
+
+These requirements form the basis for evaluating and comparing the selected development boards in the following sections.
+
+=== ESP32
+The ESP32 is a low-cost microcontroller commonly used in IoT applications
+It is designed for embedded systems with limited resources and is capable of running lightweight AI models (TinyML).
+Due to its low power consumption and integrated connectivity, it is well-suited for distributed sensor-based systems.
+
+*Pros:*
+
+* *AI and Machine Learning Capabilities:* The ESP32 is capable of running AI and Machine Learning models, making it suitable for the project.
+* *Power Consumption:* The ESP32 has a low power consumption, making it suitable for energy-efficient projects.
+* *Cost:* The ESP32 is cost-effective, with prices typically ranging from 5 to 10 euros.
+* *Scalability:* The ESP32 is scalable, with various models available that offer different levels of performance and features.
+* *Built-in Wi-Fi and Bluetooth:* The ESP32 has built-in Wi-Fi and Bluetooth capabilities, which can be useful for IoT applications.
+* *Large Community and Support:* The ESP32 has a large community of developers and users, which can provide support and resources for development.
+
+<<<
+
+*Cons:*
+
+* *Limited Processing Power:* The ESP32 may have limited processing power compared to more powerful development boards, which may limit the complexity of AI and Machine Learning models that can be run on it.
+* *Limited Memory:* The ESP32 has limited memory, which may also limit the size and complexity of AI and Machine Learning models that can be run on it.
+* *Not suitable for complex AI applications:* The ESP32 may not be suitable for complex AI applications that require high processing power and memory, such as deep learning models.
+* *Slow inference:* The ESP32 may have slow inference times for AI and Machine Learning models, which may not be suitable for real-time applications.
+
+=== Raspberry Pi 4
+The Raspberry Pi 4 is a single-board computer that functions similarly to a small desktop computer.
+It runs a full Linux operating system and supports a wide range of software, including advanced AI and Machine Learning frameworks.
+This makes it suitable for more complex processing tasks and system coordination.
+
+*Pros:*
+
+* *AI and Machine Learning Capabilities:* The Raspberry Pi 4 is capable of running AI and Machine Learning models, making it suitable for the project.
+* *Supports various ML frameworks:* The Raspberry Pi 4 supports various ML frameworks such as TensorFlow, PyTorch, and OpenCV, which can be useful for development.
+* *Flexible:* The Raspberry Pi 4 runs a full operating system (Linux), which allows for greater flexibility in terms of software and development tools.
+
+*Cons:*
+
+* *Power Consumption:* The Raspberry Pi 4 has a higher power consumption compared to the ESP32, which may not be suitable for energy-efficient projects.
+* *Cost:* The Raspberry Pi 4 prices typically ranging from 45 to 120 euros, depending on the model and specifications.
+* *AI acceleration:* The Raspberry Pi 4 may not have built-in AI acceleration capabilities, which may limit the performance of AI and Machine Learning models.
+* *Real-time applications:* The Raspberry Pi 4 may not be suitable for real-time applications that require low latency and high performance.
+
+<<<
+
+=== Nvidia Jetson Nano
+The Nvidia Jetson Nano is an AI-focused development board designed specifically for running more complex Machine Learning and deep learning models.
+It includes a GPU for hardware acceleration, making it particularly suitable for tasks such as computer vision and neural network inference.
+
+*Pros:*
+
+* *AI and Machine Learning Capabilities:* The Nvidia Jetson Nano is specifically designed for AI and Machine Learning applications, making it highly suitable for the project.
+* *High Performance:* The Nvidia Jetson Nano has a powerful GPU that can accelerate AI and Machine Learning models, providing high performance for complex applications.
+* *Supports various ML frameworks:* The Nvidia Jetson Nano supports various ML frameworks such as TensorFlow, PyTorch, and OpenCV, which can be useful for development.
+
+*Cons:*
+
+* *Power Consumption:* The Nvidia Jetson Nano has a higher power consumption compared to the ESP32 and Raspberry Pi 4, which may not be suitable for energy-efficient projects.
+* *Cost:* The Nvidia Jetson Nano prices typically ranging from 120 to 230 euros.
+* *Overkill for simple applications:* The Nvidia Jetson Nano may be overkill for simple AI applications that do not require high performance, which may not be cost-effective for the project.
+
+=== Comparison of Development Boards
+
+.Comparison Table
+[cols="1,1,1,1", options="header"]
+|===
+| Feature | ESP32 | Raspberry Pi 4 | Nvidia Jetson Nano
+
+| Type | Microcontroller | Single-board computer | AI-focused single-board computer
+
+| Typical Cost | €5 – €10 | €45 – €120 | €120 – €230
+
+| Power Consumption | Very low | Medium | High
+
+| AI Capability | TinyML (lightweight models) | Full ML frameworks (CPU-based) | Accelerated AI (GPU-based)
+
+| Performance | Low | Medium | High
+
+| Connectivity | Built-in WiFi & Bluetooth | WiFi (external), Ethernet, USB | Ethernet, USB (WiFi via dongle)
+
+| Ease of Use | Moderate | Easy | Moderate
+
+| Best Use Case | Distributed sensor nodes | Central processing / gateway | Advanced AI / computer vision
+|===
+
+<<<
+    
+== Conclusion
+Based on the research conducted, the ESP32 development board appears to be the most suitable option for the project.
+It meets the requirements for running AI and Machine Learning models, has low power consumption, is cost-effective, and is scalable.
+While the Raspberry Pi 4 and Nvidia Jetson Nano offer higher performance, they may not be necessary for the project's needs and may not be as cost-effective or energy-efficient.
+Especially when various plants are being monitored, having multiple nodes, the power consumption and cost of the Raspberry Pi 4 and Nvidia Jetson Nano may become prohibitive.
+The Raspberry Pi 4 could be included in the project as the central brain of the system, while the ESP32 could be used as the edge device for monitoring the plants.
+However, for the sake of simplicity and cost-effectiveness, it may be more practical to use only the ESP32 for the project.
+Therefore, the ESP32 is recommended for use in the personal project for the Minor AI for Society course.
+
+<<<
+
+== References
+
+[bibliography]
+* [[[esp32_datasheet]]] Espressif Systems. *ESP32 Series Datasheet*. Available at: https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf
+
+* [[[esp32_tinyml]]] TensorFlow. *TensorFlow Lite for Microcontrollers*. Available at: https://www.tensorflow.org/lite/microcontrollers
+
+* [[[rpi4_docs]]] Raspberry Pi Foundation. *Raspberry Pi 4 Model B Documentation*. Available at: https://www.raspberrypi.com/documentation/
+
+* [[[rpi_ml]]] Raspberry Pi Foundation. *Machine Learning on Raspberry Pi*. Available at: https://www.raspberrypi.com/documentation/computers/ai.html
+
+* [[[jetson_nano]]] NVIDIA. *Jetson Nano Developer Kit Documentation*. Available at: https://developer.nvidia.com/embedded/jetson-nano-developer-kit
+
+* [[[jetson_ai]]] NVIDIA. *Jetson AI Platform Overview*. Available at: https://developer.nvidia.com/embedded-computing
+
+* [[[tinyml_book]]] Warden, P., & Situnayake, D. (2019). *TinyML: Machine Learning with TensorFlow Lite on Arduino and Ultra-Low-Power Microcontrollers*. O’Reilly Media.
+
+* [[[edge_ai_overview]]] Shi, W., et al. (2016). *Edge Computing: Vision and Challenges*. IEEE Internet of Things Journal.
+
+* [[[embedded_ml]]] Banbury, C., et al. (2021). *Benchmarking TinyML Systems: Challenges and Direction*. arXiv. Available at: https://arxiv.org/abs/2003.04821

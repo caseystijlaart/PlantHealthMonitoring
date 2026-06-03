@@ -1,0 +1,20 @@
+@startuml
+title Edge AI Workflow - Plant Monitoring on ESP32
+left to right direction
+
+actor "User" as User
+
+rectangle "ESP32 Microcontroller\n(Edge Device)" {
+  rectangle "Sensors" as Sensors
+  rectangle "Data Preprocessing" as Preprocess
+  rectangle "TinyML Model\n(On-device Inference)" as Model
+}
+
+
+
+User --> Sensors : Checks plant data
+Sensors --> Preprocess : Collect environmental signals
+Preprocess --> Model : Feature extraction
+
+
+@enduml

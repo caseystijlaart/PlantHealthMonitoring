@@ -1,0 +1,26 @@
+@startuml
+participant MonitoringController as MC
+participant SensorManager as SM
+participant ISensor as Sensor
+participant Prediction as Pred
+participant Communication as Comm
+participant UserInterface as UI
+actor User
+
+loop for x times
+MC -> SM : ReadAll()
+loop for each sensor
+  SM -> Sensor : GetData()
+  Sensor --> SM : float
+end
+
+SM --> MC : SensorData
+
+MC -> Pred : Predict(data, config)
+Pred --> MC : False
+end
+alt i > x times
+MC -> Comm : Send(error)
+Comm -> UI : Prediction error
+end
+@enduml

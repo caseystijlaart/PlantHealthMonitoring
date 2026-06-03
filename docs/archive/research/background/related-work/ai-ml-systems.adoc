@@ -1,0 +1,25 @@
+= AI/ML-Based Plant Health Monitoring Systems
+
+In contrast to traditional IoT-based plant monitoring systems, recent developments have begun integrating Artificial Intelligence (AI) and Machine Learning (ML) techniques.
+These systems are capable of not only monitoring environmental parameters but also analyzing data to make intelligent predictions, detect anomalies, and optimize plant care.
+
+AI/ML-based plant health monitoring systems can:  
+
+* Predict irrigation needs based on soil moisture trends and weather conditions.
+* Detect early signs of plant stress or disease using sensor data or images.
+* Provide automated recommendations or interventions to improve plant health.
+* Learn and adapt to the specific requirements of different plant species over time.
+
+These advancements enable more proactive and efficient plant management, surpassing the reactive threshold-based alerts of traditional systems.
+
+**Examples of AI/ML-based systems include:**  
+
+* IoT-Based Smart Plant Monitoring System (Emergent Mind)
+* AI-Enabled IoT-Based Smart Indoor Plant Care System (Academia.edu)
+* Deep Learning for Plant Health Monitoring (Nature Scientific Reports)
+* AI-Driven Smart Plant Monitoring (IJSAT Journal)
+* Plant Health Monitoring System (GitHub)
+
+These systems illustrate the potential for combining IoT hardware with AI/ML algorithms to achieve intelligent, autonomous plant care and monitoring.
+
+These existing approaches highlight the potential for enhancement by integrating AI and ML techniques, which could enable predictive care, anomaly detection, and intelligent decision-making for plant health and irrigation management.

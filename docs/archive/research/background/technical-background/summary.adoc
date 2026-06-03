@@ -1,0 +1,12 @@
+= Summary of Technical Background
+
+This technical background outlines the foundations for an AI-driven plant monitoring system on embedded hardware
+Low-power microcontrollers combined with TinyML enable real-time, on-device inference using sensor data such as soil moisture, temperature, and light.
+
+Sensor data is inherently time-series, requiring lightweight preprocessing and analysis techniques to extract meaningful patterns
+Public datasets, including those from platforms such as Kaggle, support model development, although custom data collection remains important for domain-specific accuracy.
+
+Lightweight models such as decision trees, linear models, and small neural networks are most suitable for deployment on constrained devices
+A validation strategy has been defined to evaluate model performance based on accuracy, efficiency, and hardware constraints.
+
+Overall, this foundation supports the development of an efficient, autonomous Edge AI system for plant monitoring on devices such as the ESP32.

@@ -1,0 +1,15 @@
+@startuml
+left to right direction
+
+component "Sensor Array" as SA
+component "Edge Node\n(ESP32)" as EN
+component "Data Storage" as DS
+component "User Interface" as UI
+
+SA --> EN : Sensor data
+EN --> DS : Upload measurements /\ninference results
+UI --> DS : Plant profiles /\nsettings requests
+DS --> UI : Historical data /\nhealth status
+UI --> EN : BLE provisioning /\ndevice configuration
+
+@enduml

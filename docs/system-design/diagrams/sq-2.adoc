@@ -1,0 +1,31 @@
+@startuml
+participant MonitoringController as MC
+participant SensorManager as SM
+participant ISensor as Sensor
+participant Prediction as Pred
+participant Communication as Comm
+participant DataStorage as DS
+participant UserInterface as UI
+actor User
+
+MC -> SM : ReadAll()
+
+loop for each sensor
+  SM -> Sensor : GetData()
+  Sensor --> SM : float
+end
+
+SM --> MC : SensorData
+
+MC -> Pred : Predict(data, config)
+Pred --> MC : PlantHealth
+
+MC -> Comm : Send(data, health)
+Comm -> DS : StoreMonitoringData(data, health)
+DS --> Comm : Stored
+
+alt Abnormal condition detected
+  Comm -> UI : Send alert data
+  UI --> User : Show abnormal condition alert
+end
+@enduml

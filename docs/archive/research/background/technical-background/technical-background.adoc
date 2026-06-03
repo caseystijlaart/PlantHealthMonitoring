@@ -1,0 +1,26 @@
+= Technical Background
+This section provides an in-depth technical background relevant to the design and implementation of the plant health monitoring system. It covers various AI/ML approaches, datasets, model research, embedded system constraints, validation strategies, and design implications that inform the development of the project.
+
+:leveloffset: +1
+
+include::edge-ai.adoc[]
+
+<<< 
+
+include::sensor-data.adoc[]
+
+<<<
+
+include::datasets.adoc[]
+
+<<<
+
+include::model-overview.adoc[]
+
+<<<
+    
+include::validation-overview.adoc[]
+
+include::summary.adoc[]
+
+:leveloffset: -1

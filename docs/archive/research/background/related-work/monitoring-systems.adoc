@@ -1,0 +1,20 @@
+= IoT-Based Plant Monitoring Systems
+
+Currently, a variety of plant monitoring systems are available, most of which have been developed by students, hobbyists, or small-scale developers.
+These systems generally focus on environmental monitoring rather than advanced AI-based analysis.
+
+
+Many of these solutions are open-source, providing access to hardware and software designs, while others are proprietary.
+The majority of existing systems do not integrate AI or Machine Learning; instead, they monitor environmental parameters, such as soil moisture, temperature, and humidity, and notify users when predefined thresholds are exceeded.
+
+
+Some implementations are more advanced, incorporating automated irrigation systems that water plants when certain conditions are met, improving plant care efficiency.
+Other systems are simpler, only sending alerts or notifications to the user without any automation.
+ 
+
+**Examples of existing systems include:**  
+
+* Plant Monitoring System by Shishir3D
+* IoT-based Plant Health Care System (MDPI)
+* IoT-Based Plant Health Care System (Academia.edu)
+* IoT-Based Smart Irrigation System (Academia.edu)

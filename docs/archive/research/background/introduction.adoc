@@ -1,0 +1,5 @@
+= Introduction
+This document serves as a research report for the related work and technical background of the personal project for the Minor AI for Society course.
+The purpose of this report is to provide an overview of the related work in the field of AI and its applications in society, as well as the technical background necessary for the development of the project.
+The report is structured into two main sections: Related Work and Technical Background. 
+The Related Work section will review existing research and applications of AI in society, while the Technical Background section will cover the fundamental concepts and technologies that underpin the project.

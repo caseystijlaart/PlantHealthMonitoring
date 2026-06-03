@@ -1,0 +1,28 @@
+# Build artifacts
+build/
+.dart_tool/
+*.iml
+
+# PlatformIO
+.pio/
+.pioenvs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Secrets
+secrets.ini
+.dart_defines
+app/lib/secrets.dart
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

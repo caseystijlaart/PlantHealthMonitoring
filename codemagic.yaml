@@ -1,0 +1,30 @@
+workflows:
+  ios-workflow:
+    name: iOS Build
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    working_directory: sem-7-AI/personal-project/src/phm_app
+    scripts:
+      - name: Install dependencies
+        script: flutter pub get
+
+      - name: Install CocoaPods
+        script: |
+          cd ios && pod install
+
+      - name: Build iOS (no codesign)
+        script: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        script: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/Runner.app
+          zip -r Runner.ipa Payload
+
+    artifacts:
+      - build/ios/iphoneos/Runner.ipa
+      - /tmp/xcodebuild_logs/*.log

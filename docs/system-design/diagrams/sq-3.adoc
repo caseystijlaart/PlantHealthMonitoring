@@ -1,0 +1,27 @@
+@startuml
+actor User
+participant UserInterface as UI
+participant DataStorage as DS
+participant Communication as Comm
+participant MonitoringController as MC
+
+group View Plant Data
+  User -> UI : Request plant data
+  UI -> DS : GetPlantData(plantId)
+  DS --> UI : Current and historical data
+  UI --> User : Display plant data
+end
+
+group Update Settings
+  User -> UI : Change plant settings
+  UI -> DS : UpdatePlantSettings(settings)
+  DS --> UI : Settings updated
+
+  UI -> Comm : Send updated configuration
+  Comm -> MC : ReceiveConfig()
+  MC -> MC : UpdateConfiguration()
+  MC --> Comm : Ok
+  Comm --> UI : Ok
+  UI --> User : Settings updated
+end
+@enduml

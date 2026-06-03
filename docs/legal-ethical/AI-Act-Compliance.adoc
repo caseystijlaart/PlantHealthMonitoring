@@ -1,0 +1,201 @@
+= AI Act Compliance : PlantHealthMonitor
+:title-page: true
+:author: Casey Stijlaart
+:docdatetime: datetime (ISO)
+:sectnums:
+:doctype: report
+:toc:
+:toclevels: 3
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+
+== Version Information
+*Project Name :* PlantHealthMonitor
+
+*Version :* Prototype
+
+*Document Version :* 1.0
+
+== Purpose of this Document
+This document assesses the PlantHealthMonitor system against the requirements of Regulation (EU) 2024/1689 (Artificial Intelligence Act).
+
+The purpose of this assessment is to:
+
+* Determine whether PlantHealthMonitor qualifies as an AI system under the AI Act.
+* Identify which articles and annexes of the AI Act are applicable.
+* Assess whether the system is prohibited or high-risk.
+* Define the resulting risk classification and its obligations.
+
+The AI Act is a risk-based regulation. Therefore, only provisions relevant to the system's intended purpose and risk level are assessed in detail.
+
+<<<
+
+== System Description
+PlantHealthMonitor is an embedded IoT system designed to help users monitor and care for their indoor plants.
+
+The system collects environmental sensor data from an ESP32 microcontroller connected to a set of sensors. Based on the collected data, the system classifies the plant's current health condition and provides care recommendations to the user via a mobile and desktop application.
+
+The system is designed as a support tool that assists users in understanding their plant's condition and does not make decisions on behalf of users.
+
+== Intended Purpose
+The primary purpose of PlantHealthMonitor is to:
+
+* Monitor environmental conditions around an indoor plant.
+* Classify the plant's health as healthy, moderate risk, or high risk.
+* Predict the time until a care action (e.g. watering) becomes urgent.
+* Provide actionable care recommendations to the user.
+* Notify the user when abnormal plant conditions are detected.
+
+The system is intended exclusively for personal indoor plant care.
+
+The system is not intended for:
+
+* Employee monitoring.
+* Educational assessment.
+* Healthcare diagnosis.
+* Creditworthiness assessment.
+* Legal decision-making.
+* Government or law enforcement purposes.
+
+<<<
+
+== System Functionality
+
+=== Input Data
+The system processes the following categories of environmental data:
+
+* Soil moisture percentage.
+* Ambient temperature in degrees Celsius.
+* Relative humidity percentage.
+* Light intensity percentage.
+* Historical sensor readings from the preceding measurement cycles.
+
+No biometric data, personal data, or user-identifying information is collected or processed.
+
+=== System Outputs
+The system generates outputs including:
+
+* A health risk classification (healthy / moderate risk / high risk).
+* A time estimate until a care action is needed.
+* Boolean care action flags (water, reduce temperature, increase light, increase humidity).
+* A human-readable recommendation summary.
+* Push notifications when risk class changes to moderate or high.
+
+=== AI Functionality
+
+==== Current Functionality
+The current functionality includes:
+
+* On-device health risk classification using a trained MLP neural network (TensorFlowLite).
+* Predictive irrigation modelling using a trained MLP regression model.
+* Rule-based care action determination informed by ML risk output.
+* Per-plant preference profile support (low / mid / high per sensor).
+
+==== Future Functionality
+Future versions of the system may be able to:
+
+* Retrain models on real collected sensor data as it accumulates.
+* Expand the plant species library with pre-configured care profiles.
+
+All recommendations provided by the system are always intended as optional guidance.
+
+<<<
+
+== AI Act Assessment
+The AI Act establishes a risk-based regulatory framework, meaning that different legal obligations apply depending on the nature and risk level of an AI system.
+
+To support this assessment, the https://artificialintelligenceact.eu/assessment/eu-ai-act-compliance-checker/[EU AI Act Compliance Checker] was used as an indicative tool to identify applicable provisions.
+
+PlantHealthMonitor qualifies as an AI system under Article 3(1) as it generates predictions and recommendations based on sensor data. Having been assessed against the prohibited practices of Article 5 and the high-risk domains of Annex III, the system does not fall under either category - it monitors plant conditions for personal use, processes no personal or biometric data, and produces no legally significant decisions.
+
+The assessment therefore focuses on the articles that are directly applicable to the system.
+
+=== Risk Classification
+PlantHealthMonitor is classified as a **Minimal-Risk AI System** under the AI Act. The system provides health classifications and care recommendations but does not operate in any high-risk domain, does not engage in prohibited AI practices, and does not trigger Article 50 limited-risk transparency obligations.
+
+=== Article 69 - Codes of Conduct for Minimal-Risk Systems
+Article 69 encourages providers of minimal-risk AI systems to voluntarily adopt codes of conduct and apply best practices in transparency, robustness, and human oversight. PlantHealthMonitor applies these principles voluntarily as described in the sections below.
+
+== Transparency Measures
+In the spirit of Article 50 and Article 13, and in line with Article 69 (voluntary codes of conduct for minimal-risk systems), the system ensures transparency through:
+
+* Displaying raw sensor readings alongside every recommendation so users understand the basis for each suggestion.
+* Explicitly labelling the risk classification (Healthy / Moderate Risk / High Risk) rather than hiding it inside an opaque output.
+* Communicating care actions as suggestions, not instructions.
+* Providing documentation (this document, the user manual, and the final project report) explaining the model architecture, training data, and limitations in plain language.
+
+<<<
+
+== Human Oversight
+Human oversight is maintained at all times.
+
+The system:
+
+* Does not autonomously make decisions.
+* Does not enforce care actions.
+* Does not physically actuate any hardware (no automated watering in the current implementation).
+* Does not modify plant settings automatically.
+
+Users retain full control over all decisions and may ignore or disable recommendations at any time.
+
+== Risk Assessment
+
+|===
+| Risk | Likelihood | Impact | Mitigation
+
+| Incorrect health risk classification
+| Medium
+| Low
+| Outputs are advisory; user can observe plant directly.
+
+| Inaccurate time-to-watering prediction
+| Medium
+| Low
+| Presented as an estimate; user retains final decision.
+
+| Sensor hardware failure producing misleading readings
+| Low
+| Low
+| User advised to periodically verify readings appear reasonable.
+
+| Overreliance on recommendations
+| Low
+| Medium
+| No enforcement mechanisms; system frames outputs as suggestions.
+
+| Model inaccuracy for uncommon plant species
+| Medium
+| Low
+| Synthetic training data limitation documented; user can adjust preferences.
+|===
+
+<<<
+    
+== Technical Limitations
+The system has several known limitations:
+
+* Models are trained on synthetic data; predictions may be less accurate for conditions outside the training distribution.
+* Model accuracy improves as real-world data accumulates and retraining occurs.
+* The 3-hour measurement interval means short-lived stress events between readings may not be detected.
+* Sensor hardware failures cannot be detected by the system.
+* Recommendation quality may vary across plant species with different care profiles.
+
+Outputs should be interpreted as informational guidance rather than factual determinations.
+
+== Conclusion
+PlantHealthMonitor is an AI-enabled plant monitoring system that analyses environmental sensor data and generates health classifications and care recommendations.
+
+The system qualifies as an AI system under Article 3(1) of Regulation (EU) 2024/1689.
+
+It does not involve prohibited AI practices under Article 5 and does not fall within any high-risk category defined in Annex III.
+
+The system is therefore classified as a **Minimal-Risk AI System**, with no mandatory compliance obligations under the Act. Transparency measures and human oversight provisions have been voluntarily implemented in line with Article 69 and the broader intent of the regulation.
+
+<<<
+
+== References
+
+* EU AI Act Compliance Checker EU Artificial Intelligence Act. (z.d.). https://artificialintelligenceact.eu/assessment/eu-ai-act-compliance-checker/
+* The AI Act Explorer EU Artificial Intelligence Act. (z.d.). https://artificialintelligenceact.eu/ai-act-explorer/
+* Kosinski, M., & Scapicchio, M. (2025, 17 november). EU AI Act: What is the EU AI Act? IBM. https://www.ibm.com/think/topics/eu-ai-act
+* Regulation (EU) 2024/1689 of the European Parliament and of the Council. Official Journal of the European Union, 12 July 2024. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:L_202401689

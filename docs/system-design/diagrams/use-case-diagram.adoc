@@ -1,0 +1,20 @@
+@startuml
+left to right direction
+
+actor "User" as User
+
+rectangle "Plant Health Monitoring System" {
+  usecase "Add Plant" as UC01
+  usecase "Monitor Plant" as UC02
+  usecase "View Plant Data" as UC03
+  usecase "Update Settings" as UC04
+  usecase "Abnormal Condition Alert" as UC05
+}
+
+User --> UC01
+User --> UC02
+User ---> UC03
+User --> UC04
+User --> UC05
+
+@enduml

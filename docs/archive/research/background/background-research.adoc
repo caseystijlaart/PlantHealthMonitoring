@@ -1,0 +1,34 @@
+= Personal Project Related Work & Technical Background : Minor AI for Society
+:numbered:
+:imagesdir: images
+:title-page: true
+:author: Casey Stijlaart
+:docdatetime: datetime (ISO)
+:doctype: report
+:toc:
+:toclevels: 2
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+:xrefstyle: short
+:pdf-theme: default
+:pdf-fontsize: 11
+
+:leveloffset: +1
+
+include::document-history.adoc[]
+
+include::introduction.adoc[]
+
+<<<
+
+include::related-work/related-work.adoc[]
+
+<<<
+
+include::technical-background/technical-background.adoc[]
+
+<<<
+
+include::references.adoc[]
+
+:leveloffset: -1

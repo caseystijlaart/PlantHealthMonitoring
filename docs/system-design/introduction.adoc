@@ -1,0 +1,5 @@
+= Introduction
+
+This document serves as a comprehensive guide detailing the design and architecture of the embedded system that focusses on plant monitoring and care.
+The system is designed to monitor various environmental parameters such as soil moisture, temperature, humidity, and light intensity to ensure optimal conditions for plant health.
+It contains a detailed system description with multiple diagrams defining all of the hardware components and the behavior of the system.
