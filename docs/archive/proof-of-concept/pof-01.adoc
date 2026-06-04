@@ -1,0 +1,187 @@
+= Proof of Concept Evaluation and Redesign : Personal Project - Minor AI for Society
+:numbered:
+:imagesdir: images
+:title-page: true
+:author: Casey Stijlaart
+:docdatetime: datetime (ISO)
+:doctype: report
+:toc:
+:toclevels: 2
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+:xrefstyle: short
+:pdf-theme: default
+:pdf-fontsize: 11
+
+== Introduction
+
+This document describes the findings, limitations, and redesign decisions resulting from the initial Proof of Concept (PoC) for the AI-based plant monitoring system.
+
+The original goal was to predict plant health using machine learning models based on environmental sensor data.
+
+== PoC Results
+
+The PoC implemented several machine learning models, including:
+
+* Logistic Regression
+* Multi-Layer Perceptron (MLP)
+* Random Forest
+
+The models were trained on a plant health dataset containing:
+
+* Soil moisture
+* Temperature
+* Humidity
+* Light intensity
+* Derived stress features
+
+== Key Findings
+
+=== Strong Dependence on Soil Moisture
+
+Correlation analysis revealed:
+
+* Soil moisture and moisture-related features had extremely high correlation with the target
+* Other features (temperature, humidity, light) showed minimal influence
+
+This resulted in:
+
+* Models primarily learning soil moisture thresholds
+* Limited contribution from other environmental variables
+
+=== Feature Redundancy
+
+Several engineered features were highly correlated:
+
+* Soil moisture vs moisture stress
+* Soil moisture vs interaction features
+
+This reduced the effective dimensionality of the dataset.
+
+=== Dataset Limitations
+
+The dataset exhibited characteristics of:
+
+* Synthetic or simplified labeling
+* Single-factor dependency (soil moisture)
+* Lack of real-world complexity
+
+As a result:
+
+* Machine learning models replicated simple threshold behavior
+* No meaningful multi-factor learning occurred
+
+=== Lack of Temporal Information
+
+The dataset did not include timestamps, preventing:
+
+* Trend analysis
+* Duration-based stress detection
+* Recovery tracking after watering
+
+This limited the system to static snapshot predictions.
+
+== Problem Statement
+
+The core issue identified is:
+
+The dataset does not accurately represent real-world plant health, leading to models that do not generalize beyond simple soil moisture thresholds.
+
+== Redesign Strategy
+
+To address these limitations, the system is redesigned with a hybrid approach combining:
+
+* Rule-based classification
+* Temporal analysis
+* Machine learning for pattern recognition
+
+=== Multi-Factor Classification
+
+Instead of a single health label, the system now classifies:
+
+* Temperature (kLow  / kOk / kHigh)
+* Humidity (kLow  / kOk / kHigh)
+* Soil moisture (kLow  / kOk / kHigh)
+
+This provides a more interpretable and modular representation of plant conditions.
+
+=== Stress-Based Modeling
+
+Each factor is evaluated using a stress function:
+
+Stress = |value - ideal|
+
+This allows:
+
+* Quantification of deviation
+* Plant-specific customization
+* Consistent scaling across features
+
+=== Temporal Analysis
+
+A history buffer is introduced to track:
+
+* Rolling averages
+* Value changes (delta)
+* Trends (slope)
+* Duration of stress conditions
+
+This enables detection of:
+
+* Drying patterns
+* Recovery after watering
+* Sustained unfavorable conditions
+
+=== Machine Learning Role
+
+Machine learning is repositioned to handle:
+
+* Pattern recognition over time
+* Anomaly detection
+* Risk prediction
+* Trend classification
+
+Rather than replacing rule-based logic, ML enhances the system’s ability to interpret temporal behavior.
+
+=== Recommendation Engine
+
+A recommendation layer translates system output into actionable advice:
+
+* Watering suggestions
+* Environmental adjustments
+* Risk warnings
+
+== Next Steps
+
+The following steps will be implemented:
+
+1. Develop modular C++ architecture:
+
+   * Sensor layer
+   * Classification layer
+   * Temporal buffer
+   * Feature engineering
+   * ML inference module
+
+2. Implement temporal feature extraction on-device
+
+3. Train ML models on:
+
+   * temporal features
+   * multi-factor stress indicators
+
+4. Compare rule-based vs ML-enhanced performance
+
+5. Evaluate system using real sensor data
+
+== Conclusion
+
+The initial PoC demonstrated that the dataset was insufficient for multi-factor plant health prediction.
+
+The redesigned system:
+
+* Removes dependence on flawed dataset assumptions
+* Incorporates real-world temporal behavior
+* Maintains machine learning as a core component
+
+This results in a more robust, explainable, and scalable plant monitoring system.

@@ -1,0 +1,78 @@
+= Datasets
+
+Datasets are essential for developing and evaluating AI/ML models in plant monitoring systems. They enable models to learn patterns in environmental conditions, detect anomalies, and classify plant health states. For this project, datasets that include explicit plant health labels are particularly valuable, as they enable supervised learning approaches.
+
+While traditional research datasets focus on large-scale agriculture, platforms such as Kaggle provide a growing number of accessible, labeled datasets suitable for experimentation and prototyping.
+
+== Public Sensor Datasets
+
+Several datasets provide time-series sensor data for plant monitoring:
+
+* **Soil Moisture and Environmental Datasets:**
+Datasets containing soil moisture, temperature, humidity, and light measurements support time-series analysis and anomaly detection tasks.
+
+* **IoT-based Plant Monitoring Datasets:**
+These datasets combine multiple environmental sensors and are often used for irrigation prediction and plant condition monitoring.
+
+* **Kaggle Sensor + Health Datasets:**
+Recent datasets available on Kaggle combine sensor data with plant health status labels, enabling supervised learning:
+** Smart plant biosensor monitoring datasets
+** Indoor plant growth and health datasets
+** Structured plant health datasets with labeled conditions
+
+These datasets are particularly useful for training models that map sensor inputs to plant health classification, which aligns directly with this project.
+
+== Image-Based Health Datasets
+
+In addition to sensor data, image-based datasets are widely used for plant health classification.
+For example, Kaggle offers a large large collections of labeled plant leaf images allow training of classification models for detecting diseases and health conditions.
+
+* These datasets typically include:
+** Healthy vs diseased classifications
+** Multiple disease categories
+** Annotated images suitable for deep learning models
+
+Large-scale datasets can contain tens of thousands of labeled images across multiple disease classes, making them suitable for training robust computer vision models.
+
+Although image-based models are more computationally demanding, they can be combined with sensor-based approaches in hybrid systems.
+
+== Data Collection Considerations
+
+Despite the availability of public datasets, custom data collection remains important. Key considerations include:
+
+* **Label availability:**
+Datasets with explicit health labels (e.g., “healthy”, “stressed”, “diseased”) are essential for supervised learning.
+
+* **Sampling consistency:**
+Time-series data must be collected at regular intervals to preserve temporal relationships.
+
+* **Sensor reliability:**
+Calibration and noise reduction are necessary to ensure data quality.
+
+* **Context specificity:**
+Indoor plant environments differ significantly from agricultural datasets, requiring domain-specific data.
+
+* **Edge constraints:**
+Data should be lightweight and efficient to process on embedded systems.
+
+== Limitations
+
+Despite the increasing availability of datasets, several limitations remain:
+
+* **Mismatch with use case:**
+Many datasets focus on large-scale agriculture rather than small-scale or indoor plant monitoring.
+
+* **Limited multimodal datasets:**
+Few datasets combine both sensor data and plant health labels, which are needed for robust Edge AI systems.
+
+* **Data quality issues:**
+Public datasets (especially from platforms like Kaggle) may contain noise, missing values, or inconsistencies.
+
+* **Computational constraints:**
+Image-based datasets are often too large for direct deployment on microcontrollers without significant optimization.
+
+* **Domain gap:**
+Models trained on agricultural datasets may not generalize well to home or indoor plant environments.
+
+As a result, an effective approach is to first test with the existing datasets from e.g. Kaggle. 
+Based upon the results of this test, it can be concluded whether the datasets can directly be used, or if they should be combined with a custom-collected dataset. 

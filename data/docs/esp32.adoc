@@ -1,0 +1,6 @@
+= ESP32 INFO
+
+Flash Chip ID: 50CB94EC
+Flash Size: 4194304 bytes
+Flash Speed: 80000000 Hz
+Flash Mode: QIO

@@ -1,0 +1,88 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+package EdgeNode {
+
+interface ICommunication {
+  +Init() : bool
+  +Send(data : SensorData) : bool
+  +ReceiveConfig() : PlantConfiguration
+}
+
+interface ISensor {
+  +Init() : bool
+  +GetData() : float
+  +GetType() : SensorType
+}
+
+enum SensorType {
+  HUMIDITY
+  TEMPERATURE
+  SOIL_MOISTURE
+  LIGHT
+}
+
+enum PlantHealth {
+  HEALTHY
+  MODERATE_STRESS
+  HIGH_STRESS
+}
+
+class SensorData {
+  +humidity : float
+  +temperature : float
+  +soilMoisture : float
+  +light : float
+}
+
+class PlantConfiguration {
+  +plantId : string
+  +moistureThreshold : float
+  +lightThreshold : float
+}
+
+class SensorManager {
+  +Init(sensors : ISensor[]) : bool
+  +ReadAll() : SensorData
+}
+
+class Prediction {
+  +Init() : bool
+  +Predict(data : SensorData, config : PlantConfiguration) : PlantHealth
+}
+
+class Communication {
+  +Init() : bool
+  +Send(data : SensorData) : bool
+  +ReceiveConfig() : PlantConfiguration
+}
+
+class MonitoringController {
+  -sensorManager : SensorManager
+  -prediction : Prediction
+  -communication : ICommunication
+  -configuration : PlantConfiguration
+  +RunCycle() : void
+  +UpdateConfiguration() : void
+}
+
+}
+
+ICommunication <|.. Communication
+SensorManager o-- "1..*" ISensor : manages
+
+MonitoringController --> SensorManager
+MonitoringController --> Prediction
+MonitoringController --> ICommunication
+MonitoringController --> PlantConfiguration
+
+SensorManager --> SensorData
+Prediction --> SensorData
+Prediction --> PlantConfiguration
+Prediction --> PlantHealth
+
+Communication --> SensorData
+Communication --> PlantConfiguration
+ISensor --> SensorType
+
+@enduml

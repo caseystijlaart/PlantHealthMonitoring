@@ -1,0 +1,49 @@
+= Requirements
+
+A system has various requirements, each one covering an important aspect of how the system must work or behavior.
+These requirements are divided into the user-, functional- and non-functional requirements.
+
+== User Requirements
+
+.User Requirements
+|===
+| ID | Requirement | Use Case(s)
+
+| UR_001 | The user should be able to add a new plant with its care requirements. | UC01
+| UR_002 | The user should be able to monitor the health status of a plant. | UC02, UC03
+| UR_003 | The user should be able to view current and historical plant data. | UC03
+| UR_004 | The user should be able to update plant care settings. | UC04
+| UR_005 | The user should receive notifications when abnormal conditions occur. | UC05
+|===
+
+== Functional Requirements
+
+.Functional Requirements
+|===
+| ID | Requirement | Use Case(s)
+
+| FR_001 | The user interface must allow the user to input plant details when adding a plant. | UC01
+| FR_002 | The data storage must store plant profiles and associated care settings. | UC01
+| FR_003 | The sensor array must provide environmental data such as soil moisture, temperature, and humidity. | UC02
+| FR_004 | The edge node must read and preprocess sensor data. | UC02
+| FR_005 | The edge node must use an ML model to predict plant health. | UC02
+| FR_006 | The edge node must send sensor data and predictions to the data storage. | UC02
+| FR_007 | The data storage must provide plant data when requested by the user interface. | UC03
+| FR_008 | The user interface must display current and historical plant data. | UC03
+| FR_009 | The user interface must allow the user to update plant care settings. | UC04
+| FR_010 | The data storage must update and persist modified plant settings. | UC04
+| FR_011 | The edge node must detect abnormal conditions based on sensor data and predictions. | UC05
+| FR_012 | The user interface must notify the user when abnormal conditions are detected. | UC05
+|===
+
+== Non-Functional Requirements
+
+.Non-Functional Requirements
+|===
+| ID | Requirement
+
+| NFR_001 | The system should be modular so components can be updated or replaced independently.
+| NFR_002 | The system should support multiple edge nodes and plants.
+| NFR_003 | The edge node must operate within embedded hardware constraints such as limited memory and processing power.
+| NFR_004 | The system should allow security and privacy features to be added in future iterations.
+|===

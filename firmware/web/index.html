@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>POF-03 Plant Settings</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>POF-03 Plant Settings</h1>
+      <p class="subtitle">Small web app for adjusting personalized settings on one already-connected ESP32 plant monitor.</p>
+
+      <section class="card">
+        <h2>1) Connect to your ESP32</h2>
+        <div class="row">
+          <label for="apiBase">ESP32 API base URL</label>
+          <input id="apiBase" type="url" placeholder="http://192.168.1.33" />
+          <button id="loadBtn" type="button">Load settings</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2) Adjust personalized settings</h2>
+        <form id="plantForm">
+          <div class="grid">
+            <label>Plant name <input name="plantName" required /></label>
+            <label>Humidity
+              <select name="humidityPreference">
+                <option value="pLow">pLow</option>
+                <option value="pMid" selected>pMid</option>
+                <option value="pHigh">pHigh</option>
+              </select>
+            </label>
+            <label>Temperature
+              <select name="temperaturePreference">
+                <option value="pLow">pLow</option>
+                <option value="pMid" selected>pMid</option>
+                <option value="pHigh">pHigh</option>
+              </select>
+            </label>
+            <label>Soil moisture
+              <select name="soilPreference">
+                <option value="pLow">pLow</option>
+                <option value="pMid" selected>pMid</option>
+                <option value="pHigh">pHigh</option>
+              </select>
+            </label>
+            <label>Light
+              <select name="lightPreference">
+                <option value="pLow">pLow</option>
+                <option value="pMid" selected>pMid</option>
+                <option value="pHigh">pHigh</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="row">
+            <button type="submit">Save settings on ESP32</button>
+            <span id="submitResult"></span>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>3) Saved setting snapshots</h2>
+        <ul id="profileList" class="list"></ul>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,223 @@
+= Proof of Concept 02 – Dataset & Model Revision
+:numbered:
+:title-page: true
+:author: Casey Stijlaart
+:docdatetime: datetime (ISO)
+:doctype: report
+:toc:
+:toclevels: 2
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+:xrefstyle: short
+:pdf-theme: default
+:pdf-fontsize: 11
+
+== Introduction
+
+This document describes the development and revision of the second Proof of Concept (PoC-02) for the AI-based plant health monitoring system. It builds upon the first proof of concept (PoC-01), which did not meet the expected outcomes in terms of model validity and machine learning justification.
+
+The goal of this iteration was to redesign the dataset and modeling approach such that the resulting system demonstrates a meaningful use of machine learning, rather than replicating simple rule-based logic.
+
+== Initial Situation: PoC-01
+
+=== Problem Overview
+
+The first proof of concept focused on predicting plant health using a limited set of sensor features, including:
+
+- Soil moisture
+- Temperature
+- Humidity
+- Light
+
+To enhance the predictive capability, several engineered features were introduced, such as `combined_stress`, which aggregated multiple environmental and soil-based factors into a single metric.
+
+These engineered features were not arbitrarily chosen. They were validated during an earlier dataset validation research phase, where their relevance and potential contribution to predicting plant health were assessed. While this validation provided a strong foundation for the initial model, it already indicated that some of these features might introduce bias or oversimplification.
+
+Despite this, their inclusion was considered necessary in PoC-01. The primary goal at that stage was not to create a perfect model, but to establish a working baseline and identify potential bottlenecks when transitioning from theoretical data to more realistic scenarios.
+
+=== Observed Issues
+
+The results of PoC-01 revealed several critical problems:
+
+- The model heavily relied on a single dominant feature (initially soil moisture, later moisture slope).
+- Engineered features such as `combined_stress` encoded most of the domain logic.
+- The machine learning model effectively replicated rule-based behavior.
+- Feature importance analysis showed extreme imbalance, with one feature dominating all others.
+
+This meant that:
+
+[quote]
+____
+The machine learning component did not provide added value over a simpler rule-based system.
+____
+
+=== SHAP Analysis – PoC-01
+
+.Shap Feature Importance PoC-01
+image::../../src/pof/data/plots/perm_importance.png[width=600]
+
+.Shap Summary Plot PoC-01
+image::../../src/pof/data/plots/shap_summary_class0.png[width=600]
+
+The SHAP analysis confirmed that nearly all predictive power originated from a single feature, indicating a lack of meaningful multi-feature learning.
+
+== Motivation for Revision
+
+Based on the findings of PoC-01, it was concluded that the dataset design itself was the core issue, rather than the model choice.
+
+At the same time, PoC-01 fulfilled an important role: it exposed the limitations of relying on engineered features and simplified relationships when applied to more realistic scenarios.
+
+The following design goals were established for PoC-02:
+
+- Eliminate single-feature dominance
+- Ensure multiple features contribute to predictions
+- Introduce realistic interactions between environmental and soil variables
+- Reduce reliance on engineered shortcut features
+- Create a dataset that genuinely requires machine learning
+- Implement a factor of time to simulate temporal dynamics in plant health
+
+== Approach and Implementation
+
+=== Step 1: Redesigning Data Generation
+
+The synthetic data generation process was significantly revised.
+
+Key changes:
+
+- Environmental variables (temperature, humidity, light) were made time-dependent.
+- Soil moisture dynamics were influenced by environmental conditions (evaporation effects).
+- Temporal behavior was introduced through sequences and drying duration.
+- Random noise was added to prevent deterministic patterns.
+
+This resulted in a more realistic simulation of plant behavior over time.
+
+=== Step 2: Introducing Feature Interactions
+
+Instead of defining risk using independent features, interactions were introduced:
+
+- Soil moisture × drying trend
+- Temperature × humidity (evaporation effect)
+- Dry duration × environmental stress
+
+This ensures that no single feature can fully determine the outcome.
+
+=== Step 3: Reducing Engineered Bias
+
+The feature `combined_stress`, which was previously validated and useful in PoC-01, was identified as a major source of bias in the learning process.
+
+While it remains part of the dataset for analysis purposes, it was explicitly excluded from the training feature set in PoC-02.
+
+[quote]
+____
+This forces the model to learn relationships directly from raw sensor data rather than relying on pre-engineered domain knowledge.
+____
+
+=== Step 4: Model Training and Validation
+
+The updated dataset was used to train multiple models, including:
+
+- Logistic Regression
+- Multi-Layer Perceptron (MLP)
+- Decision Tree
+
+Validation included:
+
+- Accuracy comparison
+- Confusion matrix analysis
+- SHAP feature importance
+- Permutation importance
+
+== Results and Improvements
+
+=== Feature Importance (PoC-02)
+
+.SHAP Feature Importance PoC-02
+image::../../src/pof-02/python/data/plots/permutation_importance.png[width=600]
+
+.SHAP Summary Plot PoC-02
+image::../../src/pof-02/python/data/plots/shap_summary_class0.png[width=600]
+
+The results show a clear improvement:
+
+- Multiple features contribute to predictions
+- No single feature dominates the model
+- Environmental and temporal features are actively used
+- Feature importance is consistent across SHAP and permutation analysis
+
+=== Comparison with PoC-01
+
+[cols="1,1"]
+|===
+| PoC-01 | PoC-02
+
+| Single dominant feature
+| Balanced feature contribution
+
+| Rule-based behavior replicated
+| Multi-feature learning
+
+| Strong reliance on engineered features
+| Reduced engineered feature dependency
+
+| Limited ML justification
+| Strong ML justification
+|===
+
+=== Model Performance
+
+The updated model demonstrates:
+
+- High overall accuracy
+- Improved generalization across classes
+- Better alignment with expected plant behavior
+
+However, a minor limitation remains:
+
+- The high-stress class (Class 2) is underrepresented, which slightly limits learning for extreme conditions.
+
+== Interpretation
+
+The revised dataset demonstrates that plant stress is not determined by a single variable, but emerges from the interaction of:
+
+- Soil conditions
+- Environmental factors
+- Temporal dynamics
+
+This aligns with real-world plant physiology, where stress is the result of combined influences rather than isolated thresholds.
+
+== Conclusion
+
+The transition from PoC-01 to PoC-02 represents a significant improvement in both dataset quality and model validity.
+
+Key achievements:
+
+- Successful elimination of single-feature dominance
+- Introduction of meaningful feature interactions
+- Controlled use of engineered features
+- Demonstration of true machine learning necessity
+
+This iteration validates that the system now leverages machine learning in a meaningful and justifiable way.
+
+== Future Work
+
+Further improvements could include:
+
+- Increasing representation of high-stress cases
+- Incorporating real sensor data for validation
+- Testing deployment on embedded hardware (ESP32)
+- Exploring lightweight on-device inference models
+
+
+
+== Reflection
+
+This iteration highlights the importance of dataset design in machine learning systems.
+
+The use of engineered features in PoC-01 was a deliberate and necessary step to establish a baseline and expose limitations. While these features were validated and provided useful insights, they also revealed how easily a model can become dependent on simplified representations of complex systems.
+
+By redesigning the dataset and reducing reliance on such features, PoC-02 demonstrates a more realistic and robust approach.
+
+[quote]
+____
+A well-designed dataset is more critical than model complexity in achieving meaningful AI outcomes.
+____

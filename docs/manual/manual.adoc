@@ -1,0 +1,462 @@
+= PlantHealthMonitor : Manual
+:title-page: true
+:author: Casey Stijlaart
+:docdatetime: datetime (ISO)
+:sectnums: 
+:doctype: report
+:toc:
+:toclevels: 2
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+
+<<<
+
+== Introduction
+
+PlantHealthMonitor (PHM) is an intelligent plant monitoring and care system that combines embedded IoT hardware with a cross-platform mobile application. The system collects environmental sensor data from a plant's surroundings, classifies plant health in real time using on-device machine learning, and pushes actionable care recommendations to your phone or desktop.
+
+This manual covers everything you need to set up the hardware, install the app, configure your plants, and understand the information displayed on screen.
+
+=== Key Features
+
+* **Real-time sensor monitoring** — soil moisture, temperature, humidity, and light intensity.
+* **On-device ML classification** — a trained neural network (MLP) running on the ESP32 classifies plant health as healthy, moderate, or high risk without a cloud round-trip.
+* **ML-powered time predictions** — a second regression model predicts how many minutes until a care action (e.g. watering) becomes urgent.
+* **Rule-based care actions** — the system applies sensor thresholds to decide which actions to recommend (water, reduce temperature, increase light, increase humidity).
+* **Push notifications** — instant alerts when a plant needs attention, plus an optional daily summary.
+* **Multi-plant support** — manage several plants, each with its own device and preference profile.
+* **Cross-platform app** —  iOS, and Windows are supported.
+
+<<<
+
+== System Overview
+
+PlantHealthMonitor consists of three layers that work together:
+
+[cols="1,2,3", options="header"]
+|===
+| Layer | Component | Responsibility
+
+| Edge
+| ESP32 microcontroller + sensors
+| Collects sensor readings, runs TinyML inference, syncs data to the cloud every 3 hours.
+
+| Cloud
+| Supabase (PostgreSQL + Realtime)
+| Stores sensor readings and plant settings; delivers live updates to connected apps.
+
+| App
+| Flutter (Android / iOS / Windows)
+| Displays live readings, charts, and recommendations; sends push notifications; stores your preferences.
+|===
+
+=== Data Flow
+
+----
+Sensors (soil, temp, humidity, light)
+    ↓
+ESP32 — preprocessing → TinyML inference → risk class + recommendations
+    ↓
+Supabase cloud (plant_readings table)
+    ↓
+Flutter app (realtime subscription) → dashboard + notifications
+----
+
+=== Health Risk Levels
+
+The system classifies each reading into one of three risk levels:
+
+[cols="1,2,4", options="header"]
+|===
+| Level | Label | Meaning
+
+| 0
+| Healthy
+| All sensor values fall within your plant's preferred bands. No action needed.
+
+| 1
+| Moderate Risk
+| One or more values are outside the preferred band but not critical. Monitor closely.
+
+| 2
+| High Risk
+| Critical conditions detected. Immediate action is recommended.
+|===
+
+<<<
+
+== Hardware Setup
+
+=== Bill of Materials
+
+[cols="1,3,1", options="header"]
+|===
+| Qty | Item | Notes
+
+| 1 | ESP32 development board | Any standard 38-pin variant
+| 1 | Capacitive soil moisture sensor | Analog output, connects to GPIO 34
+| 1 | DHT22 temperature & humidity sensor | Connects to GPIO 4
+| 1 | LDR (light-dependent resistor) | Analog output with 10 kΩ pull-down, connects to GPIO 35
+| 1 | 10 kΩ resistor | For the LDR voltage divider
+| — | Jumper wires | Male-to-male and male-to-female
+| 1 | USB-A to micro-USB or USB-C cable | For flashing and serial monitor
+|===
+
+=== Wiring Diagram
+
+[cols="2,2", options="header"]
+|===
+| Sensor pin | ESP32 pin
+
+| Soil moisture — AOUT | GPIO 34
+| DHT22 — DATA | GPIO 4
+| DHT22 — VCC | 3.3 V
+| DHT22 — GND | GND
+| LDR — one leg (with 10 kΩ to GND) | GPIO 35
+| LDR — other leg | 3.3 V
+|===
+
+NOTE: GPIO 34 and 35 are input-only pins on the ESP32. Do not connect any output signal to them.
+
+<<<
+
+=== Flashing the Firmware
+
+The firmware is managed with PlatformIO.
+
+. Install https://platformio.org/[PlatformIO] (VS Code extension or CLI).
+. Navigate to the firmware source:
++
+[source,shell]
+----
+cd src/prototype-non-local
+----
+. Copy the example configuration and fill in your credentials:
++
+[source,shell]
+----
+cp platformio.ini.example platformio.ini
+----
+. Open `platformio.ini` and set the following values:
++
+[source,ini]
+----
+build_flags =
+    -D WIFI_SSID=\"YourNetworkName\"
+    -D WIFI_PASSWORD=\"YourPassword\"
+    -D PLANT_LABEL=\"my_plant\"
+    -D DEVICE_NAME=\"Living Room\"
+----
+. Build and upload to the device (replace `esp32_com3_non_local` with the environment matching your COM port):
++
+[source,shell]
+----
+platformio run -e esp32_com3_non_local
+platformio run -t upload -e esp32_com3_non_local
+----
+. Verify the device is running correctly:
++
+[source,shell]
+----
+platformio device monitor -b 115200
+----
++
+You should see sensor readings and WiFi connection logs printed every 3 hours.
+
+TIP: If you have multiple plants, repeat these steps for each ESP32 with a unique `PLANT_LABEL` value. Available environments are `esp32_com3_non_local`, `esp32_com4_non_local`, and `esp32_com5_non_local`.
+
+<<<
+
+== Mobile App Setup
+
+=== Installation
+
+==== iOS
+
+Download `phm_app_<version>.ipa` from the `releases/phm/` folder. Full sideloading instructions using Sideloady on Windows are included in `releases/phm/README.adoc`.
+
+==== Windows
+
+. Download the release archive from `releases/phm_app_windows_<version>.zip`.
+. Extract the archive and run `phm_app.exe`.
+
+=== Building from Source
+
+[source,shell]
+----
+cd src/phm_app
+flutter pub get
+flutter run                  # connected device or emulator
+flutter run -d windows       # Windows desktop
+flutter build apk            # Android release APK
+----
+
+Flutter 3.x or later is required.
+
+<<<
+
+== Using the App
+
+=== Dashboard
+
+The dashboard is the main screen. It shows a card for each plant found in the cloud, including:
+
+* **Status badge** — Healthy / Moderate Risk / High Risk.
+* **Last updated** — how long ago the most recent reading arrived.
+* **Sensor tiles** — four tiles showing the current values for soil moisture, temperature, humidity, and light.
+* **Recommendation summary** — a short text describing any care action needed and the estimated time until it is required.
+
+Tap a sensor tile to see which preference band the current reading falls into (low / mid / high).
+
+Pull down on the dashboard to force a refresh from the cloud.
+
+=== Plant Selector
+
+If you have more than one plant, use the dropdown at the top of the dashboard to switch between them. Each plant is identified by its `PLANT_LABEL` from the firmware.
+
+=== Sensor Detail
+
+Tapping the *Data* button on a plant card opens the sensor history charts. Charts show the last week of readings (up to 56 data points at 3-hour intervals) for each sensor.
+
+=== Plant Preferences
+
+Tap the *Preferences* button (or navigate via the menu) to edit the care preferences for a plant.
+
+Each of the four sensors has a preference selector with three options:
+
+[cols="1,3", options="header"]
+|===
+| Option | Meaning
+
+| Low | The plant prefers lower values for this sensor (e.g. a cactus for soil moisture).
+| Mid | The plant prefers moderate values.
+| High | The plant prefers higher values (e.g. a tropical plant for humidity).
+|===
+
+After editing, tap *Save*. The preferences are synced to the cloud and used by the recommendation engine on the next sensor reading.
+
+=== Notifications
+
+==== Instant Alerts
+
+The app sends a push notification any time a plant's risk class changes to Moderate or High Risk. Duplicate notifications are suppressed — you will not receive the same alert twice for the same condition.
+
+==== Daily Summary
+
+You can enable a daily summary notification that reports the status of all your plants at a chosen time. To configure this:
+
+. Open *Settings* from the navigation menu.
+. Toggle *Daily Report* on.
+. Pick a time using the time picker.
+
+The app schedules this notification locally on your device and it fires even if the app is in the background.
+
+==== Disabling Notifications
+
+Toggle *Instant Alerts* or *Daily Report* off individually in *Settings*.
+
+<<<
+
+== Understanding Readings & Recommendations
+
+=== Sensor Ranges
+
+The sensors report percentages (0–100 %) except temperature, which is in degrees Celsius.
+
+[cols="2,1,1,1", options="header"]
+|===
+| Sensor | Low band | Mid band | High band
+
+| Soil moisture (%) | 0–33 | 34–66 | 67–100
+| Temperature (°C) | < 18 | 18–28 | > 28
+| Humidity (%) | 0–40 | 41–70 | 71–100
+| Light (%) | 0–33 | 34–66 | 67–100
+|===
+
+=== Recommendation Actions
+
+The recommendation engine can trigger four care actions:
+
+[cols="1,3", options="header"]
+|===
+| Action | What it means
+
+| Water the plant | Soil moisture is below the preferred band or declining towards it. The time estimate shows how long until watering becomes urgent.
+| Reduce temperature | Temperature is above the preferred band.
+| Increase light | Light level is below the preferred band.
+| Increase humidity | Humidity is below the preferred band.
+|===
+
+The timing estimate (e.g. "water in 4 hours") is produced by a trained regression neural network running on the ESP32 — it predicts how many minutes until the action becomes urgent based on sensor history. The action flags themselves (water / reduce temp / etc.) are determined by rule-based threshold checks on the raw sensor values, combined with the ML risk class.
+
+When the risk class is 0 (Healthy), no actions are triggered and the recommendation summary shows a positive status message.
+
+<<<
+
+== Troubleshooting
+
+=== ESP32 is not connecting to WiFi
+
+* Check that `WIFI_SSID` and `WIFI_PASSWORD` are correct in `platformio.ini` and rebuild.
+* The ESP32 only supports 2.4 GHz networks. Make sure you are not connecting to a 5 GHz band.
+* Open the serial monitor (`platformio device monitor -b 115200`) to read detailed connection logs.
+
+=== No data appears in the app
+
+* Confirm the ESP32 is powered on and has successfully connected to WiFi (check the serial monitor).
+* The device syncs every 3 hours. Wait for the next sync cycle or reset the device to force an immediate sync.
+* Check that the `PLANT_LABEL` in the firmware matches what the app is looking for.
+
+=== App shows stale data
+
+* Pull down on the dashboard to force a cloud refresh.
+* Check your internet connection on the mobile device.
+
+=== Notification not received
+
+* Make sure notifications are enabled for the app in your device's system settings.
+* On Android 13 and later, the app requires the `POST_NOTIFICATIONS` runtime permission. Grant it via *Settings → Apps → PlantHealthMonitor → Permissions*.
+
+=== Preferences are not saving
+
+* The app requires an internet connection to sync preferences to the cloud. Connect to the internet and try again.
+* If the problem persists, force-quit the app and re-enter your preferences.
+
+<<<
+
+== Technical Reference
+
+=== Cloud Database Schema
+
+==== plant_readings
+
+[cols="2,1,3", options="header"]
+|===
+| Column | Type | Description
+
+| plant_label | text | Unique identifier for the plant (matches firmware `PLANT_LABEL`).
+| device_id | text | Hardware identifier of the ESP32.
+| device_name | text | Human-readable device name.
+| soil_moisture_pct | float | Soil moisture as a percentage (0–100).
+| temperature_c | float | Ambient temperature in °C.
+| humidity_pct | float | Relative humidity as a percentage (0–100).
+| light_level_pct | float | Light intensity as a percentage (0–100).
+| risk_class | int | Health classification: 0 = healthy, 1 = moderate, 2 = high.
+| action_water | bool | Whether watering is recommended.
+| action_reduce_temp | bool | Whether reducing temperature is recommended.
+| action_increase_light | bool | Whether increasing light is recommended.
+| action_increase_humidity | bool | Whether increasing humidity is recommended.
+| recommendation_summary | text | Human-readable recommendation including time predictions.
+| timestamp | timestamptz | Reading time in UTC.
+|===
+
+==== plant_settings
+
+[cols="2,1,3", options="header"]
+|===
+| Column | Type | Description
+
+| plant_label | text | Unique plant identifier (primary key).
+| soil_preference | text | `low`, `mid`, or `high`.
+| temperature_preference | text | `low`, `mid`, or `high`.
+| humidity_preference | text | `low`, `mid`, or `high`.
+| light_preference | text | `low`, `mid`, or `high`.
+| version | int | Incremented on each save; used for synchronisation.
+|===
+
+=== Firmware Configuration Reference
+
+[cols="2,1,3", options="header"]
+|===
+| Flag | Default | Description
+
+| `WIFI_SSID` | — | 2.4 GHz network name.
+| `WIFI_PASSWORD` | — | Network password.
+| `PLANT_LABEL` | — | Unique plant identifier string.
+| `DEVICE_NAME` | — | Friendly name shown in the app.
+|===
+
+=== ML Models
+
+The firmware contains two trained neural networks that run directly on the ESP32:
+
+**Health risk classifier** — a multi-layer perceptron (MLP) with a hidden layer (ReLU activation) and a softmax output layer. It takes normalised sensor features as input and outputs a risk class (0, 1, or 2) with per-class confidence scores. A rule-based fallback classifier is also available and can be selected via the pluggable `MLLayer` backend. Edge Impulse models are additionally supported.
+
+**Predictive irrigation model** — a regression MLP with a hidden layer (ReLU) and a linear output. It was trained on log-transformed target values (minutes until watering is needed) and uses `expm1` to convert the output back to minutes. This value drives the time estimate in the recommendation summary.
+
+The care action flags (water / reduce temp / increase light / increase humidity) are generated by a separate rule-based `RecommendationEngine` that compares raw sensor readings against the per-plant preference thresholds, using the ML risk class as an additional input.
+
+<<<
+
+== Future Possibilities
+
+This section outlines improvements and extensions that could be added to PlantHealthMonitor in future iterations.
+
+=== Wireless Configuration WiFi/BLE
+
+Currently, WiFi credentials and the plant label must be compiled into the firmware before flashing. A more user-friendly approach would be to use a WiFi provisioning flow:
+
+* On first boot, the ESP32 broadcasts its own temporary access point.
+* The user connects to that access point with their phone and opens a simple configuration page.
+* WiFi credentials, plant label, and device name are entered and saved to non-volatile storage on the device.
+* The ESP32 then restarts and connects to the configured network.
+
+This would remove the need for PlatformIO entirely for end users and make it practical to move a device to a different network without reflashing. Frameworks such as ESP-IDF's `wifi_provisioning` component or the Arduino `WiFiManager` library already provide most of this functionality.
+
+As an alternative to the WiFi provisioning flow above, Bluetooth Low Energy (BLE) could be used to configure the device from the Flutter app directly. The app would scan for nearby unconfigured devices, connect over BLE, and push the network credentials and plant label — no access point switching required.
+
+BLE could also serve as a local data channel for users who do not want to connect the device to the internet at all, syncing readings directly to the phone when in range.
+
+=== Built-in Plant Profiles
+
+At the moment, users set preferences manually (low / mid / high per sensor). A future version could ship a plant species library with pre-defined care profiles. Users would pick their plant from a list (e.g. "Snake Plant", "Peace Lily", "Basil") and the correct preferences would be populated automatically. The library could be:
+
+* Bundled with the app for offline use.
+* Pulled from a community-maintained cloud database so new species can be added without an app update.
+
+User-defined custom profiles would remain available for unlisted species.
+
+=== Support for Additional Sensor Types
+
+The current sensor set covers the most common care factors, but the hardware layer could be extended to support:
+
+* **pH sensor** — soil acidity monitoring, relevant for sensitive species.
+* **EC (electrical conductivity) sensor** — measures nutrient levels in the soil.
+* **CO₂ sensor** — useful for indoor grow environments.
+
+The pluggable `MLLayer` architecture already makes it relatively straightforward to retrain models with additional input features once new sensors are added.
+
+=== Improved ML Model Training Pipeline
+
+The current ML models are trained offline and their weights are exported as C++ header files. A more scalable approach would be to:
+
+* Continuously collect labelled sensor data from all deployed devices (with user consent).
+* Retrain the models periodically in the cloud.
+* Push updated weights to devices over OTA.
+
+This would allow the models to improve over time and adapt to a wider variety of plants and environments.
+
+=== Multi-User and Sharing Support
+
+Currently each installation is tied to a single Supabase project. Adding an authentication layer would allow:
+
+* Multiple users to share ownership of the same plant (e.g. housemates).
+* Read-only guest access so a plant-sitter can monitor status without changing settings.
+* Per-user notification preferences independent of device configuration.
+
+<<<
+
+== Appendix : Glossary
+
+[cols="1,3", options="header"]
+|===
+| Term | Definition
+
+| ESP32 | Low-cost Wi-Fi + Bluetooth microcontroller used as the sensing device.
+| TinyML / TFLM | TensorFlow Lite Micro — a framework for running ML models on microcontrollers.
+| Plant label | A string identifier that links a hardware device to its cloud records and app preferences.
+| Risk class | An integer (0, 1, or 2) output from the ML model indicating the current health level.
+| Preference band | The user-selected range (low / mid / high) for a sensor that the recommendation engine uses to evaluate readings.
+| Supabase | The managed cloud backend providing PostgreSQL storage and realtime change events.
+| OTA | Over-the-Air firmware update — allows flashing new firmware over WiFi without a USB cable.
+|===

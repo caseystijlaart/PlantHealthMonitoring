@@ -1,0 +1,14 @@
+= Summary of Existing Plant Monitoring Systems
+
+Plant monitoring systems can be grouped into three categories:
+
+* **IoT-Based (Non-AI/ML):** Monitor parameters like soil moisture, temperature, and humidity, often triggering alerts or basic automation
+Widely used in hobbyist projects, but lack predictive intelligence 
+
+* **AI/ML-Based Systems:** Research prototypes that predict irrigation needs, detect stress or disease, and provide adaptive recommendations
+Mostly experimental with limited consumer adoption 
+
+* **Commercial Solutions:** Large-scale agricultural systems with advanced sensors and IoT platforms
+Highly capable but costly and unsuitable for indoor or small-scale plants 
+
+Overall, there is a gap for **affordable, small-scale AI/ML-based plant monitoring**, combining intelligent predictions with IoT for personal plant care.

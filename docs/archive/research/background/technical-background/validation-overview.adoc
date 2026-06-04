@@ -1,0 +1,50 @@
+= Validation Strategy
+
+This section outlines the planned approach for evaluating the performance of the proposed AI/ML models. As implementation and data collection are still in early stages, this section focuses on the methodology that will be used in later development phases.
+
+== Basic Dataset Splitting
+
+To evaluate model performance, datasets will be divided into:
+
+* **Training set:** Used to train the model.
+* **Validation set:** Used to tune model parameters.
+* **Test set:** Used for final evaluation.
+
+A common split such as 70/15/15 or 80/20 will be used, depending on dataset size. For time-series data, care will be taken to preserve temporal order to avoid data leakage.
+
+== Evaluation Metrics
+
+Model performance will be evaluated using appropriate metrics depending on the task:
+
+**Classification tasks (plant health):**
+
+* Accuracy  
+* Precision and recall  
+* F1-score  
+
+**Regression tasks (e.g., soil moisture prediction):**
+
+* Mean Absolute Error (MAE)  
+* Root Mean Squared Error (RMSE)  
+
+**Anomaly detection:**
+
+* Detection rate  
+* False positive rate  
+
+These metrics provide insight into both model correctness and reliability.
+
+== Performance Considerations
+
+In addition to model accuracy, performance on embedded hardware will be evaluated based on:
+
+* **Inference time:**  
+Ensuring real-time responsiveness on the microcontroller.
+* **Memory usage:**  
+Model size must fit within available RAM and flash memory.
+* **Energy consumption:**  
+Efficient models are required for continuous operation.
+* **Robustness:**  
+The model should perform reliably under noisy or incomplete sensor data.
+
+These constraints are critical for deployment on resource-constrained devices such as the ESP32.

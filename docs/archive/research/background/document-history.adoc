@@ -1,0 +1,10 @@
+= Document History
+
+.Document History
+|===
+| Version | Date       | Status | Author        | Description 
+
+| 0.1     | 18-03-2026 | Initial Version | Casey Stijlaart | Related Work
+| 0.2     | 18-03-2026 | Initial Version | Casey Stijlaart | Technical Background; Edge AI, Sensor Data
+| 1.0     | 20-03-2026      | First Version |    Casey Stijlaart | Completed First Version
+|===

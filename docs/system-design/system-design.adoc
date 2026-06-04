@@ -1,0 +1,41 @@
+= Personal Project System Design Document : Minor AI for Society
+:numbered:
+:imagesdir: images
+:title-page: true
+:author: Casey Stijlaart
+:docdatetime: datetime (ISO)
+:doctype: report
+:toc:
+:toclevels: 2
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+:xrefstyle: short
+:pdf-theme: default
+:pdf-fontsize: 11
+
+:leveloffset: +1
+
+include::document-history.adoc[]
+
+<<<
+
+include::introduction.adoc[]
+
+<<<
+
+include::system-description.adoc[]
+
+<<<
+
+include::design/design.adoc[]
+
+<<<
+    
+include::system-behavior/system-behavior.adoc[]
+
+<<<
+    
+include::hardware-diagram.adoc[]
+
+
+:leveloffset: -1

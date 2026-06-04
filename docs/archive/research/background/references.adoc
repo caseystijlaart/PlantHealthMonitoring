@@ -1,0 +1,40 @@
+= References
+
+[bibliography]
+* [[[plantmonitoring_github]]] Shishir3D. *Plant Monitoring System*. Available at: https://github.com/Shishir3D/PlantMonitoringSystem
+* [[[plantmonitoring_mdpi]]] MDPI. *IoT-Based Plant Monitoring System*. Available at: https://www.mdpi.com/2673-4591/32/1/12
+* [[[planthealth_academia]]] Academia.edu. *IoT-Based Plant Health Care System*. Available at: https://www.academia.edu/127680898/IOT_BASED_PLANT_HEALTH_CARE_SYSTEM
+* [[[smartirrigation_academia]]] Academia.edu. *IoT-Based Smart Irrigation System*. Available at: https://www.academia.edu/117576198/IoT_Based_Smart_Irrigation_System
+* [[[ai_plant_emergentmind]]] Emergent Mind. *IoT-Based Smart Plant Monitoring System*. Available at: https://www.emergentmind.com/topics/iot-based-smart-plant-monitoring-system
+* [[[ai_plant_academia]]] Academia.edu. *AI-Enabled IoT-Based Smart Indoor Plant Care System*. Available at: https://www.academia.edu/145072019/AI_ENABLED_IOT_BASED_SMART_INDOOR_PLANT_CARE_SYSTEM
+* [[[ai_plant_nature]]] Nature Scientific Reports. *Deep Learning for Plant Health Monitoring*. Available at: https://www.nature.com/articles/s41598-025-34681-1
+* [[[ai_plant_ijsat]]] IJSAT Journal. *AI-Driven Smart Plant Monitoring*. Available at: https://www.ijsat.org/papers/2025/1/2971.pdf
+* [[[ai_plant_github]]] CodeByPinar. *Plant Health Monitoring System*. Available at: https://github.com/CodeByPinar/Plant-Health-Monitoring
+* [[[commercial_connectedgreen]]] Connected Green. *Soil Moisture Sensor*. Available at: https://connectedgreen.nl/bodemvochtsensor
+* [[[commercial_cropwise]]] Cropwise. *Interra Scan Platform*. Available at: https://www.cropwise.com/netherlands/interra-scan
+* [[[commercial_vivent]]] Vivent Biosignals. *Food and Agriculture Inputs*. Available at: https://vivent-biosignals.com/solutions/food-and-ag-inputs
+* [[[esp32_edgeimpulse]]] Edge Impulse. *Deploying Edge AI on ESP32 Devices*. Available at: https://docs.edgeimpulse.com/docs/edge-ai-hardware/mcu
+* [[[esp32_tflite]]] TensorFlow Lite for Microcontrollers. *Running TinyML Models on ESP32*. Available at: https://www.tensorflow.org/lite/microcontrollers
+* [[[esp32_ai_projects]]] Jomjol / GitHub. *AI-on-the-Edge Device with ESP32*. Available at: https://jomjol.github.io/AI-on-the-edge-device-docs/
+* [[[esp32_smartirrigation]]] Academia.edu. *Edge AI IoT Smart Irrigation with ESP32*. Available at: https://www.academia.edu/117576198/IoT_Based_Smart_Irrigation_System
+* [[[timeseries_anomaly_arxiv]]] Arxiv.org. *Anomaly Detection in Time Series Data for IoT Systems*. Available at: https://arxiv.org/abs/2006.05913
+* [[[tinyml_preprocessing_tflite]]] TensorFlow Lite for Microcontrollers. *Preprocessing and Feature Extraction for TinyML*. Available at: https://www.tensorflow.org/lite/microcontrollers/overview
+* [[[esp32_sensor_data_github]]] GitHub. *ESP32 Sensor Data Collection and Preprocessing Examples*. Available at: https://github.com/EdgeML/ESP32-Sensor-Tutorial
+* [[[soil_moisture_mendeley]]] Mendeley Data. *Soil Moisture and Temperature Dataset*. Available at: https://data.mendeley.com/datasets/fpbfmc9vnm
+* [[[neon_soil_dataset]]] NEON. *Soil and Ecological Restoration Dataset*. Available at: https://www.neonscience.org
+* [[[soil_moisture_longterm]]] ESSD. *10-Year Soil Moisture and Temperature Dataset*. Available at: https://essd.copernicus.org/articles/14/5513/2022/
+* [[[growliflower_dataset]]] Arxiv. *GrowliFlower Plant Growth Dataset*. Available at: https://arxiv.org/abs/2204.00294
+* [[[kaggle_biosensor_dataset]]] Kaggle. *Smart Plant Biosensor Monitoring Dataset*. Available at: https://www.kaggle.com/datasets/muqaddasejaz/smart-plant-biosensor-monitoring-dataset
+* [[[kaggle_indoor_growth]]] Kaggle. *Indoor Plant Health and Growth Dataset*. Available at: https://www.kaggle.com/datasets/souvikrana17/indoor-plant-health-and-growth-dataset
+* [[[kaggle_plant_health_data]]] Kaggle. *Plant Health Data*. Available at: https://www.kaggle.com/datasets/ziya07/plant-health-data
+* [[[kaggle_plant_health_dataset]]] Kaggle. *Plant Health Dataset*. Available at: https://www.kaggle.com/datasets/manutrex78/plant-healt-dataset
+* [[[kaggle_disease_dataset]]] Kaggle. *Plant Health Diseases Dataset*. Available at: https://www.kaggle.com/datasets/muqaddasejaz/plant-health-diseases-dataset
+* [[[kaggle_pathogen_dataset]]] Kaggle. *Pathogen Dataset (Image-based Plant Disease Classification)*. Available at: https://www.kaggle.com/datasets/kanishk3813/pathogen-dataset
+* [[[tinyml_book]]] Warden, P., & Situnayake, D. *TinyML: Machine Learning with TensorFlow Lite on Arduino and Ultra-Low-Power Microcontrollers*. O'Reilly Media, 2019.
+* [[[tflite_micro]]] TensorFlow. *TensorFlow Lite for Microcontrollers*. Available at: https://www.tensorflow.org/lite/microcontrollers
+* [[[esp32_tflite_blog]]] TensorFlow Blog. *TensorFlow Lite Micro Support for ESP32*. Available at: https://blog.tensorflow.org/2020/08/announcing-tensorflow-lite-micro-esp32.html
+* [[[tinyml_practices]]] Meta Intelligence. *TinyML in Practice: Engineering Methods and Performance Benchmarks*. Available at: https://www.meta-intelligence.tech/en/paper-tinyml.html
+* [[[esp32_tinyml_analysis]]] Arxiv. *TinyML: Analysis of Xtensa LX6 Microprocessor for Neural Network Applications by ESP32 SoC*. Available at: https://arxiv.org/abs/2106.10652
+* [[[tinyml_navigation]]] Arxiv. *TinyNav: End-to-End TinyML for Real-Time Autonomous Navigation on Microcontrollers*. Available at: https://arxiv.org/abs/2603.11071
+* [[[esp32_tinyml_tutorial]]] TeachMeMicro. *TinyML with ESP32 Tutorial*. Available at: https://www.teachmemicro.com/tinyml-with-esp32-tutorial/
+* [[[tinyml_workflow]]] Siqma Blog. *ESP32 TinyML Workflow and Deployment*. Available at: https://blog.siqma.com/esp32-tinyml-benchmark-energy-for-edge-intelligence/

@@ -1,0 +1,84 @@
+= Model Overview
+
+Selecting an appropriate machine learning model is critical for deploying AI on embedded systems. In the context of plant monitoring, models must balance **accuracy, interpretability, and computational efficiency**. Due to the constraints of microcontrollers, lightweight models are preferred, often requiring optimization techniques such as quantization and model pruning.
+
+== Lightweight ML Models
+
+Lightweight machine learning models are specifically designed to operate under limited memory and processing resources. For embedded systems, these models must fit within small memory footprints while maintaining acceptable performance.
+
+Common lightweight models include:
+
+* **Linear Models (e.g., Linear Regression):**  
+  Suitable for predicting continuous values such as soil moisture trends or temperature changes. These models are simple, fast, and require minimal resources.
+
+* **Decision Trees:**  
+  Effective for classification tasks such as determining plant health states (e.g., “healthy”, “dry”, “overwatered”). They are interpretable and computationally inexpensive.
+
+* **k-Nearest Neighbors (k-NN):**  
+  Can be used for classification based on similarity between sensor readings. However, it may be less efficient due to memory requirements for storing training data.
+
+* **Small Neural Networks:**  
+  Shallow neural networks with few layers can be used for more complex pattern recognition, such as combining multiple sensor inputs. These models are often deployed using TensorFlow Lite for Microcontrollers.
+
+* **Anomaly Detection Models:**  
+  Lightweight approaches such as thresholding, moving averages, or simple autoencoders can detect abnormal plant conditions in time-series data.
+
+These models are commonly used in TinyML applications due to their **low computational cost and adaptability**.
+
+== Time-Series Prediction Basics
+
+Sensor data in plant monitoring systems is inherently **time-series data**, meaning that observations are collected sequentially over time. This allows models to learn temporal patterns and predict future states.
+
+Key concepts include:
+
+* **Trend:**  
+  Long-term changes in sensor values (e.g., gradual soil drying).
+
+* **Seasonality:**  
+  Repeating patterns over time, such as daily light cycles.
+
+* **Noise:**  
+  Random fluctuations caused by sensor inaccuracies or environmental disturbances.
+
+Basic approaches for time-series prediction include:
+
+* **Moving Average Models:**  
+  Smooth data to identify trends and reduce noise.
+
+* **Autoregressive Models:**  
+  Use previous values to predict future values.
+
+* **Sliding Window Methods:**  
+  Use a fixed number of past observations as input features for machine learning models.
+
+* **Lightweight Neural Networks:**  
+  Simple feedforward networks can approximate temporal relationships when combined with windowed input data.
+
+On embedded systems, simpler methods are often preferred due to their efficiency and ease of implementation.
+
+== Suitability for ESP32 / TinyML
+
+When deploying models on microcontrollers such as the ESP32, several constraints must be considered:
+
+* **Memory limitations:**  
+  Models must fit within limited RAM and flash memory, often requiring quantization (e.g., 8-bit models).
+
+* **Processing power:**  
+  Complex models with high computational requirements are not feasible for real-time inference.
+
+* **Energy consumption:**  
+  Efficient models are necessary to maintain low power usage in continuous monitoring systems.
+
+* **Latency requirements:**  
+  Real-time responses (e.g., triggering irrigation) require fast inference times.
+
+Based on these constraints, the most suitable models for ESP32-based plant monitoring systems are:
+
+* Decision trees or rule-based models for classification tasks  
+* Linear regression for simple predictions  
+* Small neural networks deployed using TensorFlow Lite for Microcontrollers  
+* Threshold-based or statistical anomaly detection methods  
+
+More complex models, such as deep convolutional neural networks, are generally unsuitable for direct deployment on microcontrollers without significant optimization or offloading to external systems.
+
+Therefore, the model selection process must prioritize **efficiency and reliability**, ensuring that the system can perform real-time inference while operating within the constraints of embedded hardware.

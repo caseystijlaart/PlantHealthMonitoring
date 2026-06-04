@@ -1,0 +1,23 @@
+= Comparison of Existing Systems
+
+.Comparison Table of Plant Monitoring Systems
+[cols="1,1,1,1", options="header"]
+|===
+| Feature / System Type | IoT-Based (Non-AI) | AI/ML-Based | Commercial Solutions
+
+| Typical Cost | Low (€5–50) | Low–Medium (Research prototypes €20–100) | High (€100+ per sensor / system)
+
+| Target Use | Hobbyist / student projects | Research / experimental | Commercial crops / large-scale agriculture
+
+| Automation | Some (watering, notifications) | Advanced (predictive watering, alerts, recommendations) | Advanced (field irrigation, crop management)
+
+| AI/ML Integration | No | Yes (predictive and adaptive) | Limited (mostly analytics for large-scale optimization)
+
+| Sensors Used | Basic environmental (soil moisture, temperature, humidity) | Environmental + image/spectral data | Advanced multi-sensor arrays, remote sensing
+
+| Open Source Availability | Often open source | Mostly research / prototype | Rarely open source
+
+| Scalability | Easy for small-scale deployment | Moderate, experimental | High for large fields, not small-scale
+
+| Gaps Identified | Lacks AI/ML, predictive capabilities | Limited accessibility and cost-effective deployment | Not suitable for indoor/home plants, high cost
+|===

@@ -1,0 +1,25 @@
+= Related Work
+This section reviews existing research and commercial solutions related to plant health monitoring systems, with a focus on IoT-based approaches, AI/ML techniques, and the integration of these technologies in practical applications
+The review is structured into three main categories: IoT-Based Plant Monitoring Systems, AI/ML-Based Plant Health Monitoring Systems, and Commercial Solutions.
+Each category highlights key studies, methodologies, and findings that inform the design and development of the proposed system.
+The section concludes with a summary of the existing systems and their relevance to the project.
+
+:leveloffset: +1
+
+include::monitoring-systems.adoc[]
+
+<<<
+
+include::ai-ml-systems.adoc[]
+
+<<<
+
+include::commercial-systems.adoc[]
+
+<<<
+
+include::comparison-existing.adoc[]
+    
+include::summary.adoc[]
+
+:leveloffset: -1

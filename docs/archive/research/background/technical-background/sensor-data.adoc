@@ -1,0 +1,39 @@
+= Sensor Data Analysis
+In a plant monitoring system, sensor data is the foundation of all decision-making.
+Efficient analysis of this data on low-power microcontrollers requires careful consideration of sensor types, preprocessing techniques, and anomaly detection strategies.
+
+== Types of Sensor Data
+
+Plant monitoring systems typically rely on multiple environmental and plant-specific sensors, such as:
+
+* **Soil Moisture Sensors:** Measure volumetric water content to determine irrigation needs.
+* **Temperature and Humidity Sensors:** Track ambient conditions that affect plant growth.
+* **Light Sensors (e.g., PAR or LDR):** Assess sunlight exposure and photosynthetic potential.
+* **Additional sensors:** CO₂ concentration, pH, nutrient levels, or plant stress indicators can be added depending on system requirements.
+
+Each sensor produces data streams that are generally time-series in nature, making temporal patterns important for detecting anomalies or triggering automated responses.
+
+== Time-Series Anomaly Detection
+
+Time-series anomaly detection is critical in plant monitoring for identifying abnormal conditions such as drought stress, overwatering, or environmental irregularities.
+On low-power devices like the ESP32, lightweight algorithms are preferred:
+
+* **Statistical Methods:** Z-score, moving average deviations, or seasonal trend decomposition.
+* **Machine Learning Methods:** Small neural networks or auto encoders trained to detect deviations from normal patterns.
+* **Threshold-Based Alerts:** Simple, rule-based triggers suitable for on-device real-time monitoring.
+
+By detecting anomalies locally, the system can act accordingly without relying on cloud connectivity.
+
+<<<
+    
+== Lightweight Preprocessing
+
+Preprocessing sensor data before model inference is essential on constrained devices to reduce memory and computation requirements.
+Techniques include:
+
+* **Normalization and Scaling:** Adjusting sensor values to a standard range suitable for ML models.
+* **Noise Filtering:** Using low-pass filters or moving averages to remove transient spikes.
+* **Feature Extraction:** Calculating simple features such as rolling means, variance, or delta changes to summarize sensor signals.
+* **Dimensionality Reduction:** Combining correlated sensor readings or reducing sampling frequency to decrease data size.
+
+Efficient preprocessing ensures that the TinyML model receives clean, compact, and informative input, enabling accurate predictions while conserving ESP32 resources.

@@ -1,0 +1,17 @@
+@startuml
+
+component "Environmental Sensors" as ES
+component "ESP32 " as ESP
+component "Data Storage" as DS
+component "Interface" as IF
+
+ES --> ESP : Sensor data
+
+ESP --> DS : Upload data (WiFi)
+DS --> IF : Plant data / history
+
+IF --> DS : Plant settings / profiles
+
+IF --> ESP : Provisioning (BLE)
+
+@enduml

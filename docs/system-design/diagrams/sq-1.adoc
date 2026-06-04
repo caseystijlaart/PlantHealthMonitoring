@@ -1,0 +1,19 @@
+@startuml
+actor User
+participant UserInterface as UI
+participant DataStorage as DS
+participant Communication as Comm
+participant MonitoringController as MC
+
+User -> UI : Enter plant details
+
+
+UI -> Comm : Send configuration
+Comm -> MC : ReceiveConfig()
+MC -> MC : UpdateConfiguration()
+MC --> Comm : OK
+Comm -> DS : StorePlant(plant configuration)
+DS --> Comm : Plant stored
+Comm --> UI : Configured
+UI --> User : Plant added
+@enduml
