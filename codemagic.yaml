@@ -16,21 +16,4 @@ workflows:
           cd ios && pod install
 
       - name: Build iOS (no codesign)
-        script: |
-          # Flutter exits with code 1 after a successful Xcode build due to a
-          # certificate check added in recent Flutter stable versions. The .app
-          # is fully built by the time Flutter throws that error, so we ignore
-          # the exit code and verify the artifact exists instead.
-          flutter build ios --release --no-codesign || true
-          test -d build/ios/iphoneos/Runner.app || (echo "Runner.app not found — build actually failed" && exit 1)
-
-      - name: Package IPA
-        script: |
-          cd build/ios/iphoneos
-          mkdir -p Payload
-          cp -r Runner.app Payload/Runner.app
-          zip -r Runner.ipa Payload
-
-    artifacts:
-      - build/ios/iphoneos/Runner.ipa
-      - /tmp/xcodebuild_logs/*.log
+        script: flutter build ios --release --no-codesign
