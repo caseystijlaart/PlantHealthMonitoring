@@ -15,6 +15,12 @@ workflows:
         script: |
           cd ios && pod install
 
+      - name: Disable code signing in Xcode project
+        script: |
+          cd ios
+          sed -i '' 's/DEVELOPMENT_TEAM = .*;/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_IDENTITY = .*;/CODE_SIGN_IDENTITY = "";/g' Runner.xcodeproj/project.pbxproj
+
       - name: Build iOS (no codesign)
         script: flutter build ios --release --no-codesign
 
