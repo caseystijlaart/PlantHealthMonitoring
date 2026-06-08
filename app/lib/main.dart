@@ -12,6 +12,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'provisioning.dart';
 import 'secrets.dart';
 
 // ─── Brand palette (matches the HTML splash) ───────────────────────────────
@@ -1421,6 +1422,14 @@ class _DashboardState extends State<Dashboard> {
     await loadLatestStatus();
   }
 
+  Future<void> _openAddDevice() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DeviceScanScreen()),
+    );
+    // Reload plants in case a new one was just provisioned
+    if (mounted) await loadPlants();
+  }
+
   Widget buildPlantSelector() {
     final plantValue = plants.contains(selectedPlant) ? selectedPlant : null;
     return DropdownButtonFormField<String>(
@@ -1659,6 +1668,12 @@ class _DashboardState extends State<Dashboard> {
         ),
         actions: [
           if (showSettingsLabel) ...[
+            OutlinedButton.icon(
+              onPressed: _openAddDevice,
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text("Add Device"),
+            ),
+            const SizedBox(width: 8),
             FilledButton.icon(
               onPressed: openProfileSettings,
               icon: const Icon(Icons.tune, size: 16),
@@ -1671,6 +1686,7 @@ class _DashboardState extends State<Dashboard> {
               label: const Text("Settings"),
             ),
           ] else ...[
+            IconButton(tooltip: "Add Device", onPressed: _openAddDevice, icon: const Icon(Icons.add_circle_outline)),
             IconButton(tooltip: "Plant Preferences", onPressed: openProfileSettings, icon: const Icon(Icons.tune)),
             IconButton(tooltip: "App Settings", onPressed: openAppSettings, icon: const Icon(Icons.settings)),
           ],
