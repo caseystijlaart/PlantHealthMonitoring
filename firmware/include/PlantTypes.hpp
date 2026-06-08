@@ -71,7 +71,7 @@ struct UserPreferences {
 
 struct PlantRuleProfile {
     char plantName[32] = "unnamed";
-    char deviceId[32] = "unknown-device";
+    char deviceId[40] = "unknown-device"; // 40 bytes to hold a UUID (36 chars + null)
     char deviceName[32] = "unknown";
     // Tuned for airy/chunky soil mixes: moisture drops slower and sensor reads lower.
     MetricThresholds soilMoistureThresholds{28.0f, 33.0f, 55.0f, 60.0f, 90.0f};

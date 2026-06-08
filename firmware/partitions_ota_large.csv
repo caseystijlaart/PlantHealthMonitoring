@@ -1,0 +1,13 @@
+# Partition table for 4 MB flash with two large OTA slots.
+# Gives ~1.94 MB per app slot (vs 1.25 MB default) at the cost of a tiny
+# SPIFFS (64 KB — enough for the sensor history CSV).
+#
+# Use this for environments that need OTA updates (esp32_com3_ota, esp32_com4_ota).
+# For non-OTA environments use the built-in huge_app.csv instead (3 MB, no OTA).
+#
+# Name,     Type, SubType,  Offset,    Size,     Flags
+nvs,        data, nvs,      0x9000,    0x5000,
+otadata,    data, ota,      0xe000,    0x2000,
+app0,       app,  ota_0,    0x10000,   0x1F0000,
+app1,       app,  ota_1,    0x200000,  0x1F0000,
+spiffs,     data, spiffs,   0x3F0000,  0x10000,

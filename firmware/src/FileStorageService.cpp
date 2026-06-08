@@ -140,7 +140,7 @@ std::vector<SensorSnapshot> FileStorageService::LoadHistoryFile(const char *file
     return snapshots;
 }
 
-bool FileStorageService::AppendToHistoryFile(const char *filePath, const MonitoringCycleResult &result, const char *plantLabel, int deviceId, std::size_t maxEntries)
+bool FileStorageService::AppendToHistoryFile(const char *filePath, const MonitoringCycleResult &result, const char *plantLabel, const char *deviceId, std::size_t maxEntries)
 {
     const std::int64_t unixTime = timeService_.GetCurrentUnixTimeUtc() > 0
                                       ? timeService_.GetCurrentUnixTimeUtc()
