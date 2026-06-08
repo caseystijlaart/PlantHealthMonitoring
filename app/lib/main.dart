@@ -1711,12 +1711,6 @@ class _DashboardState extends State<Dashboard> {
         ),
         actions: [
           if (showSettingsLabel) ...[
-            OutlinedButton.icon(
-              onPressed: _openAddDevice,
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text("Add Device"),
-            ),
-            const SizedBox(width: 8),
             FilledButton.icon(
               onPressed: openProfileSettings,
               icon: const Icon(Icons.tune, size: 16),
@@ -1729,7 +1723,6 @@ class _DashboardState extends State<Dashboard> {
               label: const Text("Settings"),
             ),
           ] else ...[
-            IconButton(tooltip: "Add Device", onPressed: _openAddDevice, icon: const Icon(Icons.add_circle_outline)),
             IconButton(tooltip: "Plant Preferences", onPressed: openProfileSettings, icon: const Icon(Icons.tune)),
             IconButton(tooltip: "App Settings", onPressed: openAppSettings, icon: const Icon(Icons.settings)),
           ],
@@ -1857,16 +1850,130 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
 
   List<String> _plants = [];
 
+  // Connected devices: list of {device_id, plant_label, status, last_seen}
+  List<Map<String, dynamic>> _connectedDevices = [];
+  bool _devicesLoading = false;
+
   @override
   void initState() {
     super.initState();
     _loadPlants();
+    _loadDevices();
   }
 
   Future<void> _loadPlants() async {
     final res = await supabase.from('plant_settings').select('plant_label');
     if (!mounted) return;
     setState(() => _plants = (res as List).map((e) => e['plant_label'] as String).toList());
+  }
+
+  Future<void> _loadDevices() async {
+    if (!mounted) return;
+    setState(() => _devicesLoading = true);
+    try {
+      // Fetch all plant_settings rows that have a device linked
+      final psRes = await supabase
+          .from('plant_settings')
+          .select('plant_label, device_id')
+          .not('device_id', 'is', null);
+
+      final List<Map<String, dynamic>> result = [];
+      for (final row in psRes as List) {
+        final deviceId = row['device_id'] as String?;
+        if (deviceId == null || deviceId.isEmpty) continue;
+        // Fetch device info
+        final devRes = await supabase
+            .from('devices')
+            .select('status, last_seen')
+            .eq('device_id', deviceId)
+            .limit(1);
+        if (devRes.isNotEmpty) {
+          result.add({
+            'device_id':   deviceId,
+            'plant_label': row['plant_label'],
+            'status':      devRes[0]['status'] ?? 'unknown',
+            'last_seen':   devRes[0]['last_seen'],
+          });
+        }
+      }
+      if (!mounted) return;
+      setState(() => _connectedDevices = result);
+    } finally {
+      if (mounted) setState(() => _devicesLoading = false);
+    }
+  }
+
+  Future<void> _removeDevice(Map<String, dynamic> device) async {
+    final deviceId   = device['device_id']   as String;
+    final plantLabel = device['plant_label'] as String;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: Text('Remove device?',
+            style: GoogleFonts.outfit(color: AppColors.textHigh, fontSize: 16, fontWeight: FontWeight.w600)),
+        content: Text(
+          'This will unlink the device from "$plantLabel" and trigger a factory reset on the ESP32 so it can be re-provisioned by someone else.\n\nAll historical readings will be kept.',
+          style: GoogleFonts.outfit(color: AppColors.textMid, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textLow)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Remove', style: GoogleFonts.outfit(color: AppColors.high, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      // 1. Tell the ESP32 to factory-reset on next wake
+      await supabase
+          .from('devices')
+          .update({'trigger_reset': true})
+          .eq('device_id', deviceId);
+
+      // 2. Unlink the device from the plant (keeps the plant_settings row)
+      await supabase
+          .from('plant_settings')
+          .update({'device_id': null})
+          .eq('device_id', deviceId);
+
+      // 3. Refresh the list
+      await _loadDevices();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed to remove device: $e',
+            style: GoogleFonts.outfit(color: AppColors.textHigh, fontSize: 13)),
+        backgroundColor: AppColors.surface2,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppColors.border),
+        ),
+      ));
+    }
+  }
+
+  String _fmtLastSeen(String? ts) {
+    if (ts == null) return 'Never';
+    final t = DateTime.tryParse(ts)?.toLocal();
+    if (t == null) return 'Unknown';
+    final diff = DateTime.now().difference(t);
+    if (diff.inMinutes < 2)  return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours   < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 
   Future<void> _applyDailyReport(bool enabled) async {
@@ -2000,10 +2107,166 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                       "Plant alerts fire automatically when a new reading with moderate or high risk is detected. The daily report sends one notification per day at your chosen time with the status of every plant.",
                       style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textLow),
                     ),
+
+                    const SizedBox(height: 28),
+                    // ── Connected Devices ──────────────────────────────────
+                    Row(
+                      children: [
+                        Text("CONNECTED DEVICES",
+                            style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textLow, letterSpacing: 1.8)),
+                        const Spacer(),
+                        IconButton(
+                          tooltip: "Refresh",
+                          icon: const Icon(Icons.refresh, size: 16, color: AppColors.textLow),
+                          onPressed: _loadDevices,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const DeviceScanScreen()),
+                            );
+                            _loadDevices();
+                          },
+                          icon: const Icon(Icons.add, size: 14),
+                          label: const Text("Add Device"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.accent,
+                            side: const BorderSide(color: AppColors.accentDim),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            textStyle: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    if (_devicesLoading)
+                      const Center(child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: CircularProgressIndicator(color: AppColors.accent, strokeWidth: 2),
+                      ))
+                    else if (_connectedDevices.isEmpty)
+                      _settingsTile(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.sensors_off, size: 18, color: AppColors.textLow),
+                              const SizedBox(width: 12),
+                              Text("No devices connected",
+                                  style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      _settingsTile(
+                        child: Column(
+                          children: [
+                            for (int i = 0; i < _connectedDevices.length; i++) ...[
+                              if (i > 0) Container(height: 1, color: AppColors.border),
+                              _DeviceRow(
+                                device: _connectedDevices[i],
+                                lastSeenLabel: _fmtLastSeen(_connectedDevices[i]['last_seen'] as String?),
+                                onRemove: () => _removeDevice(_connectedDevices[i]),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 10),
+                    Text(
+                      "Removing a device unlinks it from its plant and sends a factory-reset command to the ESP32 so it can be re-provisioned. Historical readings are never deleted.",
+                      style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textLow),
+                    ),
                   ],
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Device row widget ────────────────────────────────────────────────────────
+class _DeviceRow extends StatelessWidget {
+  final Map<String, dynamic> device;
+  final String lastSeenLabel;
+  final VoidCallback onRemove;
+
+  const _DeviceRow({
+    required this.device,
+    required this.lastSeenLabel,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final deviceId   = device['device_id']   as String;
+    final plantLabel = device['plant_label'] as String;
+    final status     = device['status']      as String;
+    final isActive   = status == 'active';
+    final statusColor = isActive ? AppColors.accent : AppColors.textLow;
+    // Show last 8 chars of device ID to keep it readable
+    final shortId = deviceId.length > 8 ? '…${deviceId.substring(deviceId.length - 8)}' : deviceId;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          // Status dot
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: statusColor,
+              boxShadow: isActive
+                  ? [BoxShadow(color: statusColor.withOpacity(0.5), blurRadius: 5)]
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(plantLabel,
+                    style: GoogleFonts.outfit(color: AppColors.textHigh, fontSize: 14, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text('ID: $shortId',
+                        style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 11)),
+                    const SizedBox(width: 8),
+                    Text('·', style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 11)),
+                    const SizedBox(width: 8),
+                    Text(lastSeenLabel,
+                        style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 11)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Remove button
+          TextButton(
+            onPressed: onRemove,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.high,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text('Remove', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500)),
           ),
         ],
       ),
