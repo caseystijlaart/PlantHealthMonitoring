@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,10 +8,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ── BLE UUIDs — must match ESP32 firmware ────────────────────────────────────
-// Service:  4fafc201-1fb5-459e-8fcc-c5c9c331914b  (PHM-PROVISION)
-// SSID:     beb5483e-36e1-4688-b7f5-ea07361b26a8  (write)
-// Password: beb5483e-36e1-4688-b7f5-ea07361b26a9  (write-only)
-// DeviceID: beb5483e-36e1-4688-b7f5-ea07361b26aa  (write)
+//
+// Service UUID identifies the PHM provisioning service type — it is the same
+// on every device and is how the app finds PHM devices during scanning.
+// Characteristic UUIDs are like field names; also the same on every device.
+//
+// The device_id UUID is *generated on the ESP32* (hardware RNG) and exposed
+// as a READ characteristic.  The app reads it; it never writes it.
+//
+//   Service:   4fafc201-1fb5-459e-8fcc-c5c9c331914b
+//   SSID:      beb5483e-36e1-4688-b7f5-ea07361b26a8  (WRITE)
+//   Password:  beb5483e-36e1-4688-b7f5-ea07361b26a9  (WRITE, no read)
+//   Device ID: beb5483e-36e1-4688-b7f5-ea07361b26aa  (READ)
 const String kProvisionServiceUuid = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
 const String kSsidCharUuid         = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 const String kPasswordCharUuid     = 'beb5483e-36e1-4688-b7f5-ea07361b26a9';
@@ -42,15 +49,6 @@ bool _bleSupported() =>
 
 TextStyle _ts(double size, {Color color = _textMid, FontWeight fw = FontWeight.w400}) =>
     GoogleFonts.outfit(fontSize: size, color: color, fontWeight: fw);
-
-String _generateDeviceId() {
-  final rng = Random.secure();
-  final bytes = List.generate(16, (_) => rng.nextInt(256));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  final h = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-  return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  DEVICE SCAN SCREEN
@@ -372,8 +370,6 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
     });
 
     try {
-      final deviceId = _generateDeviceId();
-
       final services = await widget.device.discoverServices();
       final service = services.firstWhere(
         (s) => s.serviceUuid.toString().toLowerCase() == kProvisionServiceUuid,
@@ -386,8 +382,15 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
             orElse: () => throw 'Characteristic $uuid not found.',
           );
 
-      setState(() => _statusMsg = 'Sending credentials…');
-      await findChar(kDeviceIdCharUuid).write(utf8.encode(deviceId), withoutResponse: false);
+      // Read the device UUID generated on the ESP32 — we never write it
+      setState(() => _statusMsg = 'Reading device ID…');
+      final rawId = await findChar(kDeviceIdCharUuid).read();
+      final deviceId = utf8.decode(rawId).trim();
+      if (deviceId.isEmpty) throw 'Device returned an empty device ID.';
+      debugPrint('[Prov] Device ID: $deviceId');
+
+      // Write WiFi credentials to the device
+      setState(() => _statusMsg = 'Sending WiFi credentials…');
       await findChar(kSsidCharUuid).write(utf8.encode(ssid), withoutResponse: false);
       await findChar(kPasswordCharUuid).write(utf8.encode(_passCtrl.text), withoutResponse: false);
 
@@ -397,7 +400,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
         _pollSeconds = 0;
       });
 
-      // Disconnect BLE — ESP32 will exit provisioning mode on its own
+      // Disconnect BLE — the ESP32 exits provisioning mode on its own
       await widget.device.disconnect();
       _startPolling(deviceId);
     } catch (e) {
