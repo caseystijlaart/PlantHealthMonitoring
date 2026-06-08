@@ -1151,6 +1151,11 @@ class _DashboardState extends State<Dashboard> {
   String _humidityPref = 'mid';
   String _lightPref    = 'mid';
 
+  // device_id map: plant_label → device_id (null if not linked yet)
+  Map<String, String?> _deviceIds = {};
+  bool _measuring = false;
+  Timer? _measureTimeout;
+
   Color _statusColor = AppColors.surface;
   bool _loading = false;
   RealtimeChannel? _realtimeChannel;
@@ -1252,11 +1257,15 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> loadPlants() async {
-    final res = await supabase.from('plant_settings').select('plant_label');
+    final res = await supabase.from('plant_settings').select('plant_label, device_id');
     final list = (res as List).map((e) => e['plant_label'] as String).toList();
+    final ids  = Map<String, String?>.fromEntries(
+      (res as List).map((e) => MapEntry(e['plant_label'] as String, e['device_id'] as String?)),
+    );
     if (!mounted) return;
     setState(() {
-      plants = list;
+      plants     = list;
+      _deviceIds = ids;
       if (!plants.contains(selectedPlant)) selectedPlant = null;
     });
   }
@@ -1377,7 +1386,14 @@ class _DashboardState extends State<Dashboard> {
             if (plant == null) return;
 
             // Always refresh UI if this is the selected plant.
-            if (plant == selectedPlant) loadLatestStatus();
+            if (plant == selectedPlant) {
+              loadLatestStatus();
+              // Clear the "measuring" spinner if it was triggered manually
+              if (_measuring) {
+                _measureTimeout?.cancel();
+                if (mounted) setState(() => _measuring = false);
+              }
+            }
 
             // Fire a notification for any non-healthy insert, for any plant.
             final risk = (row['risk_class'] ?? 0) as int;
@@ -1400,6 +1416,7 @@ class _DashboardState extends State<Dashboard> {
     if (_realtimeChannel != null) supabase.removeChannel(_realtimeChannel!);
     _iconTapTimer?.cancel();
     _readingsTapTimer?.cancel();
+    _measureTimeout?.cancel();
     super.dispose();
   }
 
@@ -1428,6 +1445,32 @@ class _DashboardState extends State<Dashboard> {
     );
     // Reload plants in case a new one was just provisioned
     if (mounted) await loadPlants();
+  }
+
+  Future<void> _triggerMeasurement() async {
+    final deviceId = _deviceIds[selectedPlant];
+    if (deviceId == null || deviceId.isEmpty) {
+      _showEasterEgg("⚠️ This plant has no linked device.");
+      return;
+    }
+    setState(() => _measuring = true);
+    try {
+      await supabase
+          .from('devices')
+          .update({'trigger_measurement': true})
+          .eq('device_id', deviceId);
+      // The realtime subscription will pick up the incoming reading and clear
+      // _measuring automatically.  Fall back after 2 minutes.
+      _measureTimeout?.cancel();
+      _measureTimeout = Timer(const Duration(minutes: 2), () {
+        if (mounted) setState(() => _measuring = false);
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _measuring = false);
+        _showEasterEgg("❌ Could not trigger measurement: $e");
+      }
+    }
   }
 
   Widget buildPlantSelector() {
@@ -1720,6 +1763,33 @@ class _DashboardState extends State<Dashboard> {
                             buildSensorGrid(),
                             if (selectedPlant != null) ...[
                               const SizedBox(height: 20),
+                              // ── Measure Now ──────────────────────────────
+                              if (_deviceIds[selectedPlant] != null &&
+                                  _deviceIds[selectedPlant]!.isNotEmpty)
+                                FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: _measuring
+                                        ? AppColors.surface2
+                                        : AppColors.accentDim,
+                                    foregroundColor: AppColors.textHigh,
+                                    minimumSize: const Size.fromHeight(44),
+                                  ),
+                                  onPressed: _measuring ? null : _triggerMeasurement,
+                                  icon: _measuring
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.accent,
+                                          ),
+                                        )
+                                      : const Icon(Icons.sensors, size: 16),
+                                  label: Text(
+                                    _measuring ? "Measuring…" : "Measure Now",
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
                               OutlinedButton.icon(
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(

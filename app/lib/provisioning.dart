@@ -18,14 +18,7 @@ const String kSsidCharUuid         = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 const String kPasswordCharUuid     = 'beb5483e-36e1-4688-b7f5-ea07361b26a9';
 const String kDeviceIdCharUuid     = 'beb5483e-36e1-4688-b7f5-ea07361b26aa';
 
-// Required Supabase migrations:
-//   CREATE TABLE devices (
-//     device_id    text PRIMARY KEY,
-//     status       text NOT NULL DEFAULT 'provisioning',  -- 'provisioning' | 'active'
-//     registered_at timestamptz,
-//     last_seen    timestamptz
-//   );
-//   ALTER TABLE plant_settings ADD COLUMN device_id text REFERENCES devices(device_id);
+// Required Supabase migrations — see supabase/migrations.sql in the repo root.
 
 const Duration _kPollInterval       = Duration(seconds: 3);
 const int      _kRegistrationTimeout = 90; // seconds
