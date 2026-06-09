@@ -778,20 +778,29 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
     });
 
     try {
-      // Plant names are immutable and must be unique across all plants, so a
-      // reading's plant_label always maps to exactly one plant.  Check up front
-      // for a friendly message (case-insensitive); the unique index on
-      // plant_settings.plant_label is the authoritative guard against races.
-      final existing = await _db
+      // Plant names are immutable and must be globally unique — across both
+      // currently-configured plants AND any plant that still has historical
+      // readings.  Readings are kept after a device is removed and carry no
+      // identity other than plant_label, so reusing a retired name would let a
+      // new plant silently inherit the old plant's history.  Block that here.
+      // The check is case-insensitive; the unique index on
+      // plant_settings.plant_label is the authoritative race guard for the
+      // active-plant case.
+      final existingSettings = await _db
           .from('plant_settings')
           .select('plant_label')
           .ilike('plant_label', name)
           .limit(1);
-      if (existing.isNotEmpty) {
+      final existingReadings = await _db
+          .from('plant_readings')
+          .select('plant_label')
+          .ilike('plant_label', name)
+          .limit(1);
+      if (existingSettings.isNotEmpty || existingReadings.isNotEmpty) {
         if (!mounted) return;
         setState(() {
           _saving = false;
-          _error = 'A plant named "$name" already exists. Please choose a different name.';
+          _error = 'A plant named "$name" already exists or has past readings. Please choose a different name.';
         });
         return;
       }
