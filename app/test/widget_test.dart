@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:phm_app/main.dart';
+import 'package:phm_app/screens/profile_settings_page.dart';
 
 void main() {
   testWidgets('Profile settings shows controls and back button', (
