@@ -10,6 +10,7 @@ public:
     static bool   writeString(const char *key, const String &value);
     static String readString (const char *key, const String &defaultValue = "");
     static bool   hasKey     (const char *key);
+    static bool   remove     (const char *key);
     static void   clearAll   ();
 
 private:

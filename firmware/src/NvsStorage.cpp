@@ -32,6 +32,16 @@ bool NvsStorage::hasKey(const char *key)
     return found;
 }
 
+bool NvsStorage::remove(const char *key)
+{
+    Preferences prefs;
+    if (!prefs.begin(kNamespace, /*readOnly=*/false))
+        return false;
+    const bool removed = prefs.remove(key);
+    prefs.end();
+    return removed;
+}
+
 void NvsStorage::clearAll()
 {
     Preferences prefs;
