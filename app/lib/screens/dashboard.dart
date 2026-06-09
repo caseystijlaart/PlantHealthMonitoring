@@ -107,6 +107,12 @@ class _DashboardState extends State<Dashboard> {
       _refreshCount = 0;
       _showEasterEgg("🌱 Okay okay! Plants grow at their own pace. Calm down.");
     }
+    // Reload the plant list too, not just the selected plant's status — a plant
+    // added (or removed) elsewhere must appear/disappear on a manual refresh.
+    await loadPlants();
+    if (mounted && selectedPlant == null && plants.isNotEmpty) {
+      setState(() => selectedPlant = plants.first);
+    }
     await loadLatestStatus();
   }
 
@@ -324,7 +330,16 @@ class _DashboardState extends State<Dashboard> {
   Future<void> openAppSettings() async {
     await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const AppSettingsPage()));
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    // The add-device flow pops all the way back here after a plant is created,
+    // and devices can be removed in settings — so reload the plant list. Select
+    // the new plant if nothing is selected, so it shows right away.
+    await loadPlants();
+    if (!mounted) return;
+    if (selectedPlant == null && plants.isNotEmpty) {
+      setState(() => selectedPlant = plants.first);
+      await loadLatestStatus();
+    }
   }
 
   Future<void> openProfileSettings() async {
