@@ -44,16 +44,27 @@ const char *const kDevicesEndpoint  = "/devices";
 const char *const kSettingsEndpoint = "/plant_settings";
 const char *const kHistoryFile      = "/sensor_history.csv";
 
-// ── App pairing state file ────────────────────────────────────────────────────
+// ── App pairing document ──────────────────────────────────────────────────────
 // Stored on LittleFS so it survives reboots independently of NVS.
 //
-//   "paired"   → device was added through the phone app; boot normally.
-//   "unpaired" → device has never been added, or was removed by the app;
-//                enter BLE provisioning mode.
+// This single document holds BOTH the pairing state and the WiFi credentials.
+// Keeping the credentials *inside* the pairing document — and nowhere else — is
+// a deliberate privacy decision:
+//
+//   * WiFi credentials never leave the device.  They are sent to the ESP32 once
+//     over BLE during provisioning and are NOT stored in the cloud database.
+//   * Because the credentials live in the pairing document, marking the device
+//     "unpaired" erases them by construction — an unpaired device retains no
+//     WiFi secrets.
+//
+// File format (newline-separated, written with a bare '\n'):
+//
+//   line 1: "paired" | "unpaired"
+//   line 2: WiFi SSID        (only written when paired)
+//   line 3: WiFi password    (only written when paired)
 //
 // This is the only gate that controls whether the device is allowed to start
-// up normally.  WiFi credentials in NVS are secondary — the pairing file is
-// the source of truth.
+// up normally, and the only place WiFi credentials are persisted.
 const char *const kPairingFile = "/pairing_state.txt";
 
 void ClearLocalHistory()
@@ -65,33 +76,73 @@ void ClearLocalHistory()
     }
 }
 
-void SetPairedWithApp(bool paired)
+// Strip a single trailing '\r' so credentials saved by older firmware (which
+// used println → "\r\n" line endings) read back cleanly.  Only '\r' is removed
+// so that legitimate trailing spaces in a password are preserved.
+void StripTrailingCr(String &s)
+{
+    if (s.endsWith("\r"))
+        s.remove(s.length() - 1);
+}
+
+// Write the pairing document.  When paired, the WiFi credentials are stored
+// alongside the state; when unpaired, only "unpaired" is written, which deletes
+// any previously stored credentials.
+void SetPairedWithApp(bool paired, const String &ssid = "", const String &password = "")
 {
     File f = LittleFS.open(kPairingFile, "w");
     if (!f)
     {
-        Serial.println(F("[FS] Failed to write pairing state"));
+        Serial.println(F("[FS] Failed to write pairing document"));
         return;
     }
-    f.print(paired ? "paired" : "unpaired");
+    if (paired)
+    {
+        f.print("paired\n");
+        f.print(ssid);     f.print('\n');
+        f.print(password); f.print('\n');
+    }
+    else
+    {
+        f.print("unpaired\n");   // no credentials — unpaired devices store no secrets
+    }
     f.close();
-    Serial.printf("[FS] Pairing state → %s\n", paired ? "paired" : "unpaired");
+    Serial.printf("[FS] Pairing document → %s%s\n",
+                  paired ? "paired" : "unpaired",
+                  paired ? " (+ WiFi credentials)" : " (credentials cleared)");
 }
 
-bool IsPairedWithApp()
+// Read the pairing document.  Returns true if the device is paired; on success
+// the stored WiFi credentials are returned via ssidOut / passwordOut.
+bool ReadPairingDoc(String &ssidOut, String &passwordOut)
 {
+    ssidOut     = "";
+    passwordOut = "";
+
     if (!LittleFS.exists(kPairingFile))
     {
-        // First boot — create the file in the default unpaired state.
+        // First boot — create the document in the default unpaired state.
         Serial.println(F("[FS] pairing_state.txt not found — creating as 'unpaired'"));
         SetPairedWithApp(false);
         return false;
     }
+
     File f = LittleFS.open(kPairingFile, "r");
     if (!f) return false;
-    const String state = f.readStringUntil('\n');
+
+    String state = f.readStringUntil('\n');
+    StripTrailingCr(state);
+    const bool paired = state.startsWith("paired");
+
+    if (paired)
+    {
+        ssidOut     = f.readStringUntil('\n');
+        passwordOut = f.readStringUntil('\n');
+        StripTrailingCr(ssidOut);
+        StripTrailingCr(passwordOut);
+    }
     f.close();
-    return state.startsWith("paired");
+    return paired;
 }
 
 constexpr unsigned long kIntervalMs         = 1000UL * 60UL * 60UL * 3UL; // 3 hours
@@ -586,13 +637,13 @@ void RunProvisioningMode()
     // explicitly authorised it by sending WiFi credentials over BLE.
     RegisterDevice();
 
-    // Persist credentials to NVS
-    NvsStorage::writeString("ssid",      gWifiSsid);
-    NvsStorage::writeString("password",  gWifiPassword);
+    // Persist the device UUID to NVS (identity, not a secret).
     NvsStorage::writeString("device_id", gDeviceId);
 
-    // Mark as paired — from this point on the device boots normally.
-    SetPairedWithApp(true);
+    // Mark as paired and persist the WiFi credentials inside the pairing
+    // document.  The credentials live only here on the device — never in NVS and
+    // never in the cloud database — and are erased automatically on unpair.
+    SetPairedWithApp(true, gWifiSsid, gWifiPassword);
 
     // Remember that provisioning ran in this session so setup() knows not to
     // do an immediate reset if plant_settings doesn't exist yet — the app is
@@ -624,14 +675,14 @@ void setup()
     Serial.printf("[Init] Legacy device #%s / plant '%s'\n",
                   gDeviceId.c_str(), gPlantLabel.c_str());
 #else
-    // Provisioned device: load from NVS
-    gWifiSsid     = NvsStorage::readString("ssid");
-    gWifiPassword = NvsStorage::readString("password");
+    // Provisioned device: identity (device UUID) lives in NVS; the WiFi
+    // credentials live in the local pairing document.
     gDeviceId     = NvsStorage::readString("device_id");
     gDeviceName   = DeriveDeviceName();   // unique per board: "PHM-A1B2C3"
     Serial.printf("[Init] Device name: %s\n", gDeviceName.c_str());
 
-    if (!IsPairedWithApp())
+    const bool paired = ReadPairingDoc(gWifiSsid, gWifiPassword);
+    if (!paired)
     {
         // Not paired with the app yet (or was removed by the app).
         // Enter BLE provisioning and wait — the device stays here until
@@ -641,7 +692,27 @@ void setup()
     }
     else
     {
-        Serial.printf("[Init] Paired — loading credentials from NVS (device_id: %s)\n",
+        // Migration: older firmware kept the credentials in NVS and only the
+        // pairing *state* in the document.  If this device was paired before the
+        // upgrade, move the NVS credentials into the pairing document and wipe
+        // them from NVS so secrets live in exactly one place.
+        if (gWifiSsid.isEmpty())
+        {
+            const String nvsSsid = NvsStorage::readString("ssid");
+            const String nvsPass = NvsStorage::readString("password");
+            if (!nvsSsid.isEmpty())
+            {
+                Serial.println(F("[Init] Migrating WiFi credentials from NVS into pairing document"));
+                gWifiSsid     = nvsSsid;
+                gWifiPassword = nvsPass;
+                SetPairedWithApp(true, gWifiSsid, gWifiPassword);
+            }
+        }
+        // Always clear any legacy NVS credentials — they must not linger there.
+        NvsStorage::remove("ssid");
+        NvsStorage::remove("password");
+
+        Serial.printf("[Init] Paired — loaded credentials from pairing document (device_id: %s)\n",
                       gDeviceId.c_str());
     }
 #endif
