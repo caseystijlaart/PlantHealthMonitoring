@@ -32,7 +32,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   void initState() {
     super.initState();
-    if (plants.isEmpty) loadPlants();
+    // Always reload from the database so a plant removed/added elsewhere isn't
+    // stale here (the passed-in list is just a snapshot).
+    loadPlants();
     loadPlantSettings();
   }
 
