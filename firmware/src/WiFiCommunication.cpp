@@ -2,7 +2,6 @@
 
 #include <WiFi.h>
 
-
 WiFiCommunication::WiFiCommunication(const char *ssid, const char *password)
     : ssid_(ssid), password_(password)
 {

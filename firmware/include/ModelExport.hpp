@@ -6,7 +6,7 @@
 #include <array>
 #include <cstddef>
 
-namespace pof02::modelexport {
+namespace modelexport {
 
 // ── Shared scaler (used by both models) ───────────────────────────────────────
 
@@ -77,4 +77,4 @@ static constexpr std::array<float, kRegHiddenCount> kRegB1 = {1.88722556f, 1.365
 static constexpr std::array<float, kRegHiddenCount> kRegW2 = {0.97134850f, 0.75846008f, 1.11407606f, 1.19556931f, -1.46697583f, -0.80153868f, 0.91973981f, -0.91124427f};
 static constexpr float                              kRegB2 = 0.20728688f;
 
-} // namespace pof02::modelexport
+} // namespace modelexport

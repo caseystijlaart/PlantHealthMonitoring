@@ -1,67 +1,76 @@
+/**
+ * @file ProvisioningService.hpp
+ * @brief BLE provisioning service for the PlantHealthMonitor ESP32 firmware.
+ */
+
 #pragma once
 
 #include <Arduino.h>
 
-// BLE provisioning service.
-//
-// BLE UUIDs — must match the Flutter app (lib/provisioning.dart):
-//
-//   Service:     4fafc201-1fb5-459e-8fcc-c5c9c331914b
-//
-//   Characteristics:
-//     SSID:      beb5483e-36e1-4688-b7f5-ea07361b26a8  (WRITE)
-//     Password:  beb5483e-36e1-4688-b7f5-ea07361b26a9  (WRITE, no read)
-//     Device ID: beb5483e-36e1-4688-b7f5-ea07361b26aa  (READ)
-//
-// Note on UUIDs:
-//   Service and characteristic UUIDs are fixed protocol identifiers — every
-//   PHM device advertises the same service UUID so the app can discover them.
-//   They are NOT device identities.
-//
-//   The *device* UUID (device_id) is a per-device value generated once on
-//   first boot using the ESP32 hardware RNG, stored in NVS, and exposed via
-//   the read-only Device ID characteristic.  The app reads it; it never writes
-//   it.  This mirrors how real IoT provisioning works (Matter, BLE Mesh, etc.).
-//
-// Usage:
-//   // On first boot, generate and persist the device UUID:
-//   String id = ProvisioningService::getOrCreateDeviceId();
-//
-//   // Then start advertising:
-//   ProvisioningService::begin("PHM-Device", id);
-//   while (!ProvisioningService::isProvisioned()) { delay(100); }
-//   // getSsid() / getPassword() / getDeviceId() are now valid
-//   ProvisioningService::stop();
+/**
+ * @brief BLE UUIDs for the PHM provisioning service.
+ *
+ * All UUIDs must match the values declared in the Flutter app
+ * (@c lib/provisioning.dart).
+ */
+static constexpr const char *kProvisionServiceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+static constexpr const char *kSsidCharUuid         = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; ///< WRITE
+static constexpr const char *kPasswordCharUuid     = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; ///< WRITE (no read)
+static constexpr const char *kDeviceIdCharUuid     = "beb5483e-36e1-4688-b7f5-ea07361b26aa"; ///< READ
+static constexpr const char *kApiKeyCharUuid       = "beb5483e-36e1-4688-b7f5-ea07361b26ab"; ///< WRITE (no read)
 
+/**
+ * @brief Static BLE provisioning service.
+ *
+ * Manages the BLE server lifecycle and exposes characteristics for receiving
+ * WiFi credentials and the Supabase API key from the phone app, and for
+ * serving the device UUID back to the app.
+ */
 class ProvisioningService
 {
 public:
-    // Generate a UUID v4 for this device (or load from NVS if already created).
-    // Call once before begin(); store the result in NVS and in gDeviceId.
+    /**
+     * @brief Returns the device UUID, generating and persisting it in NVS if
+     *        this is the first call.
+     * @return UUID v4 string.
+     */
     static String getOrCreateDeviceId();
 
-    // Start BLE server and advertising.
-    // deviceId must already be set — it is served as a readable characteristic.
+    /**
+     * @brief Initialises the BLE server and starts advertising.
+     * @param deviceName BLE advertised device name.
+     * @param deviceId   Device UUID served via the read-only characteristic.
+     */
     static void begin(const char *deviceName, const String &deviceId);
 
-    // Stop BLE and free resources.
+    /**
+     * @brief Stops BLE advertising and releases BLE resources.
+     */
     static void stop();
 
-    // True once both SSID and password have been written by the app.
+    /**
+     * @brief Returns @c true once SSID, password, and API key have all been
+     *        written by the app.
+     */
     static bool isProvisioned();
 
-    static const String &getSsid();
-    static const String &getPassword();
-    static const String &getDeviceId();
+    static const String &getSsid();      ///< @return Received WiFi SSID.
+    static const String &getPassword();  ///< @return Received WiFi password.
+    static const String &getDeviceId();  ///< @return Device UUID.
+    static const String &getApiKey();    ///< @return Received Supabase API key.
 
-    // Internal — called by BLE write callbacks; do not call directly.
+    /// @cond INTERNAL
     static void _onSsidWritten    (const String &v);
     static void _onPasswordWritten(const String &v);
+    static void _onApiKeyWritten  (const String &v);
+    /// @endcond
 
 private:
     static String ssid_;
     static String password_;
-    static String deviceId_;   // set in begin(), served read-only over BLE
+    static String deviceId_;
+    static String apiKey_;
     static bool   ssidSet_;
     static bool   passwordSet_;
+    static bool   apiKeySet_;
 };

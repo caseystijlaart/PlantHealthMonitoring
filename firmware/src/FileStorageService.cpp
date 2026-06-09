@@ -8,11 +8,6 @@
 
 #include "TimeService.hpp"
 
-using namespace pof02;
-
-namespace
-{
-
 std::vector<String> ParseCsvLine(const String &line)
 {
     std::vector<String> parts;
@@ -83,8 +78,6 @@ std::int64_t ParseTimestamp(const String &ts)
     const time_t result = mktime(&t);
     return result < 0 ? 0 : static_cast<std::int64_t>(result);
 }
-
-} // namespace
 
 FileStorageService::FileStorageService(TimeService &timeService)
     : timeService_(timeService) {}

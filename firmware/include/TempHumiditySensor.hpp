@@ -3,12 +3,28 @@
 #include <DHT.h>
 #include <utility>
 
-namespace pof02 {
-
+/**
+ * @brief A class for managing the temperature and humidity sensor.
+ */
 class TempHumiditySensor {
 public:
+    /**
+     * @brief Constructs a new temperature and humidity sensor instance.
+     * @param pin The GPIO pin to which the sensor is connected.
+     * @param dhtType The type of the DHT sensor (22 for DHT22, etc.).
+     */
     TempHumiditySensor(int pin, int dhtType = 22);
+
+    /**
+     * @brief Initializes the sensor.
+     * @return True if initialization was successful, false otherwise.
+     */
     bool Init();
+
+    /**
+     * @brief Reads the temperature and humidity from the sensor.
+     * @return A pair containing the temperature in Celsius and the humidity percentage.
+     */
     std::pair<float, float> Read() const; // temperature C, humidity %
 
 private:
@@ -17,4 +33,3 @@ private:
     mutable DHT dht_;
 };
 
-} // namespace pof02
