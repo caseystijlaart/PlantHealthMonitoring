@@ -343,6 +343,21 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
                     style: provTs(15, color: AppColors.bg, fw: FontWeight.w600)),
               ),
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textMid,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                // Nothing has been sent to the device yet, so cancelling just
+                // returns to the device list.
+                onPressed: _formBusy ? null : () => Navigator.of(context).pop(),
+                child: Text('Cancel',
+                    style: provTs(15, color: AppColors.textMid, fw: FontWeight.w600)),
+              ),
+            ),
           ],
         ),
       );
