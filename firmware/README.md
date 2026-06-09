@@ -1,174 +1,152 @@
-# POF-03 — Personalized Plant Monitoring (based on POF-02)
+# PlantHealthMonitor — Firmware
 
-This folder contains the POF-03 proof of concept, built from `src/pof-02` and extended with personalization + settings-management support while keeping TinyML-ready ESP32 integration.
+ESP32 firmware for the PlantHealthMonitor system. Collects sensor data, runs TinyML inference on-device, and syncs results to Supabase.
 
-## Goal
-Build a real-time monitoring pipeline:
+---
 
-`Sensors -> Preprocessing -> Classification -> Temporal Analysis -> ML Layer -> Recommendation`
+## Build environments
 
-## C++ modules
-- Sensor layer: moisture, temp/humidity, light from a standard LDR + 10k resistor (0 = dark) with calibration + averaging
-- Classification layer: `kLow  / kOk / kHigh` per environmental factor
-- Stress layer: per-factor and combined stress
-- Temporal core: circular history buffer with mean, delta, slope, dry-duration proxies
-- Feature engineering: compact feature vector
-- ML layer: pluggable backend (`RULE_BASED`, `TINYML_TFLM`, `EDGE_IMPULSE`)
-- Recommendation engine: actionable outputs (`water`, `reduceTemp`, `increaseLight`)
-- POC-03 extension: per-plant rule thresholds + user `pLow/pMid/pHigh` preferences for humidity, temperature, soil moisture, and light, producing personalized recommendations
+| Environment | Purpose |
+|---|---|
+| `esp32_provisioning` | All devices — BLE provisioning at runtime |
 
-## TinyML-ready backend strategy
-The ML abstraction lives in `MLLayer` and supports swapping backends:
-1. `RULE_BASED` (local/dev fallback, deterministic)
-2. `TINYML_TFLM` (TensorFlow Lite Micro / EloquentTinyML adapter point)
-3. `EDGE_IMPULSE` (Edge Impulse C++ SDK adapter point)
+WiFi credentials and the Supabase API key are **not** stored in the firmware binary. They are sent to the device once over BLE by the phone app during provisioning and stored in the LittleFS pairing document.
 
-This lets you train using external platforms and only map outputs to `MLResult` on-device.
+---
 
-## ESP32 integration suggestions
-### Option A — Edge Impulse (recommended for anomaly + classification)
-- Train impulse with the same engineered features.
-- Export Arduino/C++ library.
-- Enable `POF02_ENABLE_EDGE_IMPULSE` and call `run_classifier()` inside `EdgeImpulseBackend`.
+## Setup
+Flash a device:
 
-### Option B — TensorFlow Lite Micro / EloquentTinyML
-- Train tiny model (MLP/tree equivalent) offline.
-- Export `.tflite` and convert to C array.
-- Enable `POF02_ENABLE_TINYML_TFLM` and call inference inside `TinyMLTFLMBackend`.
-
-## Time-aware dataset note
-Synthetic training data now uses real timestamps (e.g. `2026-03-04 10:20:00`) with unix epoch and cyclical time features (`hour_sin/cos`, `dow_sin/cos`) so training is date/time-aware instead of simple step ids.
-
-## Build and upload (Arduino/PlatformIO)
-```bash
-platformio run
-platformio run -t upload
+```sh
+platformio run -e esp32_provisioning -t upload
 platformio device monitor -b 115200
 ```
 
-## POC-03 personalization web app (settings only)
-- ESP32 web UI (`/`) includes a small settings app for the already-connected plant/ESP32 pair.
-- It updates only the active plant profile preferences and plant name on that device.
-- Preferences use `pLow/pMid/pHigh` to avoid collisions with Arduino macros.
-- API routes:
-  - `GET /api/plant-settings`
-  - `POST /api/plant-settings`
+---
 
-### Standalone mini web app (optional)
-This folder also includes a small standalone browser app in `web/`:
-- `web/index.html`
-- `web/styles.css`
-- `web/app.js`
+## Provisioning flow
 
-Use it to connect to an ESP32 by entering the base URL (for example `http://192.168.1.33`), load current settings, and update preferences through the same API endpoints.
+On first boot (or after a reset), the device enters BLE provisioning mode:
 
-Quick start:
-```bash
-cd web
-python3 -m http.server 8080
+1. Generates a UUID (or loads existing one) and starts BLE advertising as `PHM-XXXXXX`
+2. App connects, reads the `device_id` characteristic, writes SSID + password
+3. Device stops BLE, connects to WiFi
+4. Calls `RegisterDevice()` — inserts itself into the Supabase `devices` table with `status = 'active'`
+5. Saves WiFi credentials + pairing state to LittleFS (`/pairing_state.txt`)
+6. App polls the `devices` table, detects the new row, shows the plant setup screen
+7. User saves plant name and preferences — app inserts a `plant_settings` row
+8. Device polls for `plant_settings` every 5 seconds, picks up the plant label, runs first cycle
+
+---
+
+## Pairing state file
+
+WiFi credentials and pairing state are stored in a single LittleFS document at `/pairing_state.txt`:
+
 ```
-Then open `http://localhost:8080`.
-
-## Python workflow
-```bash
-python3 python/generate_training_data.py
-python3 python/train_models.py
-python3 python/validate_models.py
-python3 python/export_for_tinyml.py
+paired
+MyWiFiNetwork
+MyWiFiPassword
 ```
 
+Or, when unpaired:
 
-## WiFi logging to a shared CSV-friendly store (Google Sheets)
-`main.cpp` now logs every cycle through WiFi (`INTERVAL = 3600000`, so once per hour) by sending JSON to a web endpoint. This allows **multiple ESP32 devices** to upload without being connected to a laptop.
-
-Recommended target: a Google Apps Script web app that appends to a Google Sheet (which you can download as CSV anytime).
-
-### 1) Configure each ESP32 environment
-`platformio.ini` now includes:
-- `WIFI_SSID`
-- `WIFI_PASSWORD`
-- `LOG_ENDPOINT_URL` (Google Apps Script URL)
-- `PLANT_LABEL` (e.g. `aglaonema`, `prayer_plant`)
-
-Set these values for each environment before upload.
-
-### 2) Create Apps Script endpoint (example)
-In a Google Sheet: **Extensions -> Apps Script**, then paste:
-
-```javascript
-const SHEET_NAME = 'logs';
-
-function doPost(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME)
-    || SpreadsheetApp.getActiveSpreadsheet().insertSheet(SHEET_NAME);
-
-  const payload = JSON.parse(e.postData.contents);
-
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow([
-      'timestamp_utc', 'unix_time', 'plant_label', 'device_name', 'device_id',
-      'soil_moisture_pct', 'temperature_c', 'humidity_pct', 'light_level_pct',
-      'risk_class', 'confidence', 'prob_healthy', 'prob_moderate_stress',
-      'prob_high_stress', 'action_water', 'action_reduce_temp',
-      'action_increase_humidity', 'action_increase_light', 'recommendation_summary'
-    ]);
-  }
-
-  sheet.appendRow([
-    payload.timestamp_utc,
-    payload.unix_time,
-    payload.plant_label,
-    payload.device_name,
-    payload.device_id,
-    payload.soil_moisture_pct,
-    payload.temperature_c,
-    payload.humidity_pct,
-    payload.light_level_pct,
-    payload.risk_class,
-    payload.confidence,
-    payload.prob_healthy,
-    payload.prob_moderate_stress,
-    payload.prob_high_stress,
-    payload.action_water,
-    payload.action_reduce_temp,
-    payload.action_increase_humidity,
-    payload.action_increase_light,
-    payload.recommendation_summary
-  ]);
-
-  return ContentService
-    .createTextOutput(JSON.stringify({ status: 'ok' }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+```
+unpaired
 ```
 
-Deploy with **Deploy -> New deployment -> Web app**, access level:
-- Execute as: **Me**
-- Who has access: **Anyone with the link**
+This is the **only place** WiFi credentials are persisted. Marking the device unpaired erases them by construction — an unpaired device retains no WiFi secrets. NVS is no longer used for credentials.
 
-Copy the web app URL into `LOG_ENDPOINT_URL`.
+**Pairing states:**
 
-### 3) Export to CSV
-In Google Sheets:
-- `File -> Download -> Comma Separated Values (.csv)`
+| State | Behaviour |
+|---|---|
+| File missing | Created as `unpaired` on first read → BLE provisioning mode |
+| `unpaired` | BLE provisioning mode — wait for app |
+| `paired` + plant_settings exists | Normal operation |
+| `paired` + no plant_settings (boot) | Immediate reset → BLE mode |
+| `paired` + no plant_settings (running) | Grace period (10 min) → reset → BLE mode |
 
-The `plant_label` column is included so you can quickly filter rows per plant/device.
+---
 
-## MQTT logging (HiveMQ Cloud Serverless)
-This prototype now publishes each monitoring cycle as JSON over **MQTT (TLS)** instead of writing cycle logs to local CSV files.
+## Boot sequence
 
-- Broker type: HiveMQ Cloud Serverless (remote, no local MQTT broker needed)
-- Transport: MQTT over TLS (`MQTT_HOST` + `MQTT_PORT`, default `8883`)
-- Auth: username/password
-- Topic format: `<MQTT_TOPIC_PREFIX>/<PLANT_LABEL>/<DEVICE_ID>`
+```
+setup()
+  ├─ ReadPairingDoc()
+  │    ├─ Not paired → RunProvisioningMode() [blocks until done]
+  │    └─ Paired → load WiFi credentials from pairing doc
+  ├─ ConnectWifi()
+  ├─ NTP sync
+  ├─ UpdateLastSeen()   ← PATCH only, never INSERT
+  ├─ FetchPlantLabelByDeviceId()
+  │    └─ No label + not just provisioned → reset to BLE mode
+  ├─ FetchProfileSettings()
+  ├─ LoadHistoryFile()
+  └─ RunMonitoringCycle()  ← skipped if no plant label yet
 
-### PlatformIO configuration
-Set these build flags per device environment:
-- `MQTT_HOST`
-- `MQTT_PORT` (typically `8883`)
-- `MQTT_USERNAME`
-- `MQTT_PASSWORD`
-- `MQTT_TOPIC_PREFIX`
+loop() — every 5 seconds:
+  ├─ CheckTriggerMeasurement()  → immediate cycle if flagged
+  ├─ CheckTriggerReset()        → full reset if flagged
+  └─ Plant label polling        → grace period countdown if empty
 
-### MongoDB Atlas storage flow
-The ESP32 publishes to HiveMQ. Persisting into MongoDB Atlas is done by a downstream cloud subscriber (for example HiveMQ Data Hub extension, HiveMQ webhook bridge + serverless function, Node-RED cloud flow, or custom consumer) that validates incoming messages and inserts valid records into Atlas.
+loop() — every 3 hours:
+  ├─ FetchProfileSettings()
+  ├─ RunMonitoringCycle()
+  └─ UpdateLastSeen()
+```
+
+---
+
+## Command flags (polled every 5 seconds)
+
+| Flag | Table | Set by | Effect |
+|---|---|---|---|
+| `trigger_measurement` | `devices` | App | Immediate sensor reading; flag reset to `false` after |
+| `trigger_reset` | `devices` | App (delete device) | Clear history, mark unpaired, delete DB row, wipe credentials, reboot into BLE |
+
+---
+
+## Reset paths
+
+All reset paths perform the same sequence before rebooting:
+
+1. `ClearLocalHistory()` — removes `/sensor_history.csv`
+2. `SetPairedWithApp(false)` — overwrites `/pairing_state.txt` with `unpaired` (clears WiFi credentials)
+3. `DeleteDeviceFromDb()` — DELETE from `devices` table
+4. `NvsStorage::clearAll()` — wipe any remaining NVS data
+5. `ESP.restart()`
+
+---
+
+## Sensors
+
+| Sensor | Pin | Notes |
+|---|---|---|
+| Capacitive soil moisture | GPIO 34 | Calibrated: 3500 (dry) → 1450 (wet) |
+| DHT22 (temp + humidity) | GPIO 4 | 22-type sensor |
+| LDR (light level) | GPIO 35 | 10 kΩ pull-down |
+
+---
+
+## Partition tables
+
+The default ESP32 partition (1.25 MB) is too small for BLE + TinyML + TLS together.
+
+| Environment | Partition table | App slot |
+|---|---|---|
+| `esp32_provisioning` | `huge_app.csv` (built-in) | 3.0 MB |
+
+The default ESP32 partition (1.25 MB) is too small for BLE + TinyML + TLS combined.
+
+---
+
+## Key constants
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `kIntervalMs` | 3 hours | Regular monitoring cycle |
+| `kCommandCheckMs` | 5 seconds | Command flag poll interval |
+| `kHistorySize` | 56 entries | Local sensor history ring buffer |
+| `kMaxNoPlantTicks` | 30 ticks | Grace period before reset (30 × 5 s = 2.5min) |
+| `_kRegistrationTimeout` | 90 seconds | Provisioning poll timeout (app side) |
