@@ -27,9 +27,7 @@ void WiFiCommunication::EnsureConnected()
     while (WiFi.status() != WL_CONNECTED && millis() - start < 30000UL)
     {
         delay(500);
-        Log.print('.');
     }
-    Log.println();
 
     if (WiFi.status() == WL_CONNECTED)
         Log.printf("[WiFi] Connected — IP: %s\n", WiFi.localIP().toString().c_str());

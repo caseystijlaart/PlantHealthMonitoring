@@ -154,7 +154,6 @@ void CloudService::UpdateLastSeen(const String &deviceId, std::int64_t nowUnix)
 
     const String url = base_ + kDevicesEndpoint + "?device_id=eq." + deviceId;
     Patch(url, String("{\"last_seen\":\"") + buf + "\"}");
-    Log.printf("[Cloud] last_seen → %s\n", buf);
 }
 
 bool CloudService::FetchPlantLabel(const String &deviceId, String &outLabel)

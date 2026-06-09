@@ -93,7 +93,6 @@ String ProvisioningService::getOrCreateDeviceId()
 
     const String id(uuid);
     NvsStorage::writeString("device_id", id);
-    Log.printf("[Prov] Generated device UUID: %s\n", uuid);
     return id;
 }
 

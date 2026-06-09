@@ -48,7 +48,6 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
 
     configTzTime("CET-1CEST,M3.5.0/2,M10.5.0/3", "pool.ntp.org", "time.nist.gov", "time.google.com");
 
-    Log.println("Syncing time with NTP...");
     struct tm timeInfo{};
     const unsigned long start = millis();
 
@@ -66,7 +65,6 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
             return true;
         }
 
-        Log.println("Waiting for NTP time...");
         delay(500);
     }
 
