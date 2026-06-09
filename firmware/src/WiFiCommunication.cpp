@@ -2,35 +2,28 @@
 
 #include <WiFi.h>
 
-WiFiCommunication::WiFiCommunication(const char *ssid, const char *password)
-    : ssid_(ssid), password_(password)
+void WiFiCommunication::SetCredentials(const String &ssid, const String &password)
 {
+    ssid_     = ssid;
+    password_ = password;
 }
 
-void WiFiCommunication::Connect()
+void WiFiCommunication::EnsureConnected()
 {
+    if (WiFi.status() == WL_CONNECTED)
+        return;
     if (!HasCredentials())
     {
-        Serial.println("WIFI_SSID is empty; WiFi disabled");
+        Serial.println(F("[WiFi] No credentials — skipping"));
         return;
     }
 
-    if (WiFi.status() == WL_CONNECTED)
-    {
-        Serial.print("WiFi connected. IP: ");
-        Serial.println(WiFi.localIP());
-        delay(1000);
-        return;
-    }
-
-    Serial.print("Connecting to WiFi SSID: ");
-    Serial.println(ssid_);
-
+    Serial.printf("[WiFi] Connecting to %s\n", ssid_.c_str());
     WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid_, password_);
+    WiFi.begin(ssid_.c_str(), password_.c_str());
 
-    const unsigned long startedAt = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startedAt < 30000)
+    const unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < 30000UL)
     {
         delay(500);
         Serial.print('.');
@@ -38,15 +31,9 @@ void WiFiCommunication::Connect()
     Serial.println();
 
     if (WiFi.status() == WL_CONNECTED)
-    {
-        Serial.print("WiFi connected. IP: ");
-        Serial.println(WiFi.localIP());
-        delay(1000);
-    }
+        Serial.printf("[WiFi] Connected — IP: %s\n", WiFi.localIP().toString().c_str());
     else
-    {
-        Serial.println("WiFi connection timed out");
-    }
+        Serial.println(F("[WiFi] Connection timed out"));
 }
 
 bool WiFiCommunication::IsConnected() const
@@ -56,10 +43,5 @@ bool WiFiCommunication::IsConnected() const
 
 bool WiFiCommunication::HasCredentials() const
 {
-    return String(ssid_).length() > 0;
-}
-
-IPAddress WiFiCommunication::LocalIp() const
-{
-    return WiFi.localIP();
+    return ssid_.length() > 0;
 }

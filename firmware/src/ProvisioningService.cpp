@@ -17,15 +17,18 @@ String ProvisioningService::ssid_;
 String ProvisioningService::password_;
 String ProvisioningService::deviceId_;
 String ProvisioningService::apiKey_;
-bool   ProvisioningService::ssidSet_     = false;
-bool   ProvisioningService::passwordSet_ = false;
-bool   ProvisioningService::apiKeySet_   = false;
+String ProvisioningService::supabaseUrl_;
+bool   ProvisioningService::ssidSet_         = false;
+bool   ProvisioningService::passwordSet_     = false;
+bool   ProvisioningService::apiKeySet_       = false;
+bool   ProvisioningService::supabaseUrlSet_  = false;
 
-#define SERVICE_UUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define SSID_UUID     "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define PASSWORD_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a9"
-#define DEVICEID_UUID "beb5483e-36e1-4688-b7f5-ea07361b26aa"
-#define APIKEY_UUID   "beb5483e-36e1-4688-b7f5-ea07361b26ab"
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define SSID_UUID           "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define PASSWORD_UUID       "beb5483e-36e1-4688-b7f5-ea07361b26a9"
+#define DEVICEID_UUID       "beb5483e-36e1-4688-b7f5-ea07361b26aa"
+#define APIKEY_UUID         "beb5483e-36e1-4688-b7f5-ea07361b26ab"
+#define SUPABASE_URL_UUID   "beb5483e-36e1-4688-b7f5-ea07361b26ac"
 
 /// @cond INTERNAL
 
@@ -44,6 +47,12 @@ class PasswordCallback : public BLECharacteristicCallbacks {
 class ApiKeyCallback : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pChar) override {
         ProvisioningService::_onApiKeyWritten(String(pChar->getValue().c_str()));
+    }
+};
+
+class SupabaseUrlCallback : public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pChar) override {
+        ProvisioningService::_onSupabaseUrlWritten(String(pChar->getValue().c_str()));
     }
 };
 
@@ -73,9 +82,9 @@ String ProvisioningService::getOrCreateDeviceId()
 
 void ProvisioningService::begin(const char *deviceName, const String &deviceId)
 {
-    ssid_ = password_ = apiKey_ = "";
-    deviceId_    = deviceId;
-    ssidSet_     = passwordSet_ = apiKeySet_ = false;
+    ssid_ = password_ = apiKey_ = supabaseUrl_ = "";
+    deviceId_       = deviceId;
+    ssidSet_        = passwordSet_ = apiKeySet_ = supabaseUrlSet_ = false;
 
     BLEDevice::init(deviceName);
     BLEServer  *pServer  = BLEDevice::createServer();
@@ -92,6 +101,9 @@ void ProvisioningService::begin(const char *deviceName, const String &deviceId)
 
     auto *apiKeyChar = pService->createCharacteristic(APIKEY_UUID, BLECharacteristic::PROPERTY_WRITE);
     apiKeyChar->setCallbacks(new ApiKeyCallback());
+
+    auto *urlChar = pService->createCharacteristic(SUPABASE_URL_UUID, BLECharacteristic::PROPERTY_WRITE);
+    urlChar->setCallbacks(new SupabaseUrlCallback());
 
     pService->start();
 
@@ -113,13 +125,14 @@ void ProvisioningService::stop()
 
 bool ProvisioningService::isProvisioned()
 {
-    return ssidSet_ && passwordSet_ && apiKeySet_;
+    return ssidSet_ && passwordSet_ && apiKeySet_ && supabaseUrlSet_;
 }
 
-const String &ProvisioningService::getSsid()     { return ssid_;     }
-const String &ProvisioningService::getPassword() { return password_; }
-const String &ProvisioningService::getDeviceId() { return deviceId_; }
-const String &ProvisioningService::getApiKey()   { return apiKey_;   }
+const String &ProvisioningService::getSsid()         { return ssid_;         }
+const String &ProvisioningService::getPassword()      { return password_;     }
+const String &ProvisioningService::getDeviceId()      { return deviceId_;     }
+const String &ProvisioningService::getApiKey()        { return apiKey_;       }
+const String &ProvisioningService::getSupabaseUrl()   { return supabaseUrl_;  }
 
 void ProvisioningService::_onSsidWritten(const String &v)
 {
@@ -140,4 +153,11 @@ void ProvisioningService::_onApiKeyWritten(const String &v)
     apiKey_    = v;
     apiKeySet_ = true;
     Serial.println(F("[BLE] API key received"));
+}
+
+void ProvisioningService::_onSupabaseUrlWritten(const String &v)
+{
+    supabaseUrl_    = v;
+    supabaseUrlSet_ = true;
+    Serial.printf("[BLE] Supabase URL received (%u chars)\n", v.length());
 }

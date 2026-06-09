@@ -3,42 +3,23 @@
 #include <Arduino.h>
 
 /**
- * @brief A class for managing WiFi communication, including connection handling and status checks.
+ * @brief Manages WiFi connection using credentials that can be set at runtime.
  */
 class WiFiCommunication
 {
 public:
-    /**
-     * @brief Constructs a new WiFi communication instance.
-     * @param ssid The SSID of the WiFi network to connect to.
-     * @param password The password for the WiFi network.
-     */
-    WiFiCommunication(const char *ssid, const char *password);
+    WiFiCommunication() = default;
 
-    /**
-     * @brief Connects to the WiFi network using the provided credentials.
-     */
-    void Connect();
+    /** @brief Sets the WiFi credentials. Call before EnsureConnected(). */
+    void SetCredentials(const String &ssid, const String &password);
 
-    /**
-     * @brief Checks if the device is currently connected to the WiFi network.
-     * @return True if connected, false otherwise.
-     */
+    /** @brief Connects to WiFi if not already connected. No-op with empty credentials. */
+    void EnsureConnected();
+
     bool IsConnected() const;
-
-    /**
-     * @brief Checks if WiFi credentials are provided.
-     * @return True if credentials are available, false otherwise.
-     */
     bool HasCredentials() const;
 
-    /**
-     * @brief Gets the local IP address assigned to the device.
-     * @return The local IP address.
-     */
-    IPAddress LocalIp() const;
-
 private:
-    const char *ssid_;
-    const char *password_;
+    String ssid_;
+    String password_;
 };
