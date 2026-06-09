@@ -95,7 +95,7 @@ bool IsPairedWithApp()
 }
 
 constexpr unsigned long kIntervalMs         = 1000UL * 60UL * 60UL * 3UL; // 3 hours
-constexpr unsigned long kCommandCheckMs     = 30000UL;                     // 30 seconds
+constexpr unsigned long kCommandCheckMs     = 5000UL;                      // 5 seconds
 constexpr std::size_t   kHistorySize        = 56;
 
 // ── Sensors & subsystems (same pins as before) ────────────────────────────────
@@ -135,11 +135,11 @@ uint8_t       currentVersion   = 0;
 uint8_t       gNoPlantCount    = 0;   // consecutive 30 s ticks with no plant label while running
 bool          gJustProvisioned = false; // true when BLE provisioning ran in this boot session
 
-// 20 ticks × 30 s = 10 minutes grace period before resetting a running device
+// 120 ticks × 5 s = 10 minutes grace period before resetting a running device
 // that has lost its plant_settings row.  Not applied at boot — that resets immediately.
 // Also used as the waiting period after fresh provisioning so the user has time
 // to complete plant setup in the app before the device gives up.
-constexpr uint8_t kMaxNoPlantTicks = 20;
+constexpr uint8_t kMaxNoPlantTicks = 120;
 
 // ── WiFi ─────────────────────────────────────────────────────────────────────
 
