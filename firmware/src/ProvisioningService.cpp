@@ -4,6 +4,7 @@
  */
 
 #include "ProvisioningService.hpp"
+#include "CloudLogger.hpp"
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -76,7 +77,7 @@ String ProvisioningService::getOrCreateDeviceId()
 
     const String id(uuid);
     NvsStorage::writeString("device_id", id);
-    Serial.printf("[Prov] Generated device UUID: %s\n", uuid);
+    Log.printf("[Prov] Generated device UUID: %s\n", uuid);
     return id;
 }
 
@@ -113,14 +114,14 @@ void ProvisioningService::begin(const char *deviceName, const String &deviceId)
     pAdv->setMinPreferred(0x06);
     BLEDevice::startAdvertising();
 
-    Serial.printf("[BLE] Advertising as '%s' — device_id: %s\n", deviceName, deviceId.c_str());
+    Log.printf("[BLE] Advertising as '%s' — device_id: %s\n", deviceName, deviceId.c_str());
 }
 
 void ProvisioningService::stop()
 {
     BLEDevice::stopAdvertising();
     BLEDevice::deinit(true);
-    Serial.println(F("[BLE] Provisioning stopped"));
+    Log.println(F("[BLE] Provisioning stopped"));
 }
 
 bool ProvisioningService::isProvisioned()
@@ -138,26 +139,26 @@ void ProvisioningService::_onSsidWritten(const String &v)
 {
     ssid_    = v;
     ssidSet_ = true;
-    Serial.printf("[BLE] SSID received (%u chars)\n", v.length());
+    Log.printf("[BLE] SSID received (%u chars)\n", v.length());
 }
 
 void ProvisioningService::_onPasswordWritten(const String &v)
 {
     password_    = v;
     passwordSet_ = true;
-    Serial.println(F("[BLE] Password received"));
+    Log.println(F("[BLE] Password received"));
 }
 
 void ProvisioningService::_onApiKeyWritten(const String &v)
 {
     apiKey_    = v;
     apiKeySet_ = true;
-    Serial.println(F("[BLE] API key received"));
+    Log.println(F("[BLE] API key received"));
 }
 
 void ProvisioningService::_onSupabaseUrlWritten(const String &v)
 {
     supabaseUrl_    = v;
     supabaseUrlSet_ = true;
-    Serial.printf("[BLE] Supabase URL received (%u chars)\n", v.length());
+    Log.printf("[BLE] Supabase URL received (%u chars)\n", v.length());
 }

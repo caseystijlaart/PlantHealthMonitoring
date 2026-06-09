@@ -1,4 +1,5 @@
 #include "CloudService.hpp"
+#include "CloudLogger.hpp"
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -36,7 +37,7 @@ bool CloudService::Post(const String &url, const String &json)
     https.addHeader(F("Prefer"), F("return=minimal"));
 
     const int code = https.POST(json);
-    Serial.printf("[HTTP] POST %s → %d\n", url.c_str(), code);
+    Log.printf("[HTTP] POST %s → %d\n", url.c_str(), code);
     https.end();
     return code >= 200 && code < 300;
 }
@@ -80,7 +81,7 @@ bool CloudService::Patch(const String &url, const String &json)
     https.addHeader(F("Prefer"), F("return=minimal"));
 
     const int code = https.sendRequest("PATCH", json);
-    Serial.printf("[HTTP] PATCH %s → %d\n", url.c_str(), code);
+    Log.printf("[HTTP] PATCH %s → %d\n", url.c_str(), code);
     https.end();
     return code >= 200 && code < 300;
 }
@@ -120,7 +121,7 @@ void CloudService::RegisterDevice(const String &deviceId, std::int64_t nowUnix)
     https.addHeader(F("Prefer"), F("resolution=merge-duplicates,return=minimal"));
 
     const int code = https.POST(json);
-    Serial.printf("[Cloud] Device registration → %d\n", code);
+    Log.printf("[Cloud] Device registration → %d\n", code);
     https.end();
 }
 
@@ -138,7 +139,7 @@ void CloudService::DeleteDevice(const String &deviceId)
 
     AddAuth(https);
     const int code = https.sendRequest("DELETE");
-    Serial.printf("[Cloud] Device self-delete → %d\n", code);
+    Log.printf("[Cloud] Device self-delete → %d\n", code);
     https.end();
 }
 
@@ -153,7 +154,7 @@ void CloudService::UpdateLastSeen(const String &deviceId, std::int64_t nowUnix)
 
     const String url = base_ + kDevicesEndpoint + "?device_id=eq." + deviceId;
     Patch(url, String("{\"last_seen\":\"") + buf + "\"}");
-    Serial.printf("[Cloud] last_seen → %s\n", buf);
+    Log.printf("[Cloud] last_seen → %s\n", buf);
 }
 
 bool CloudService::FetchPlantLabel(const String &deviceId, String &outLabel)
@@ -165,7 +166,7 @@ bool CloudService::FetchPlantLabel(const String &deviceId, String &outLabel)
     const String body = Get(url);
     if (body.isEmpty() || body == "[]")
     {
-        Serial.println(F("[Cloud] No plant_settings row for this device"));
+        Log.println(F("[Cloud] No plant_settings row for this device"));
         return false;
     }
 
@@ -179,7 +180,7 @@ bool CloudService::FetchPlantLabel(const String &deviceId, String &outLabel)
         return false;
 
     outLabel = body.substring(start, end);
-    Serial.printf("[Cloud] Plant label: %s\n", outLabel.c_str());
+    Log.printf("[Cloud] Plant label: %s\n", outLabel.c_str());
     return true;
 }
 
@@ -217,7 +218,7 @@ bool CloudService::FetchProfileSettings(const String &plantLabel,
 
     if (latestVersion == currentVersion)
     {
-        Serial.println(F("[Cloud] Profile up to date"));
+        Log.println(F("[Cloud] Profile up to date"));
         return true;
     }
 
@@ -226,7 +227,7 @@ bool CloudService::FetchProfileSettings(const String &plantLabel,
     outProfile.preferences.soilMoisture = ParsePreference(payload, "soil_preference");
     outProfile.preferences.temperature  = ParsePreference(payload, "temperature_preference");
     outVersion = static_cast<uint8_t>(latestVersion);
-    Serial.println(F("[Cloud] Profile updated"));
+    Log.println(F("[Cloud] Profile updated"));
     return true;
 }
 
@@ -234,7 +235,7 @@ void CloudService::SendReading(const char *json)
 {
     const String url = base_ + kReadingsEndpoint;
     if (!Post(url, json))
-        Serial.println(F("[Cloud] Upload failed"));
+        Log.println(F("[Cloud] Upload failed"));
 }
 
 bool CloudService::CheckTriggerReset(const String &deviceId)
@@ -263,6 +264,6 @@ bool CloudService::CheckTriggerMeasurement(const String &deviceId)
 
     const String patchUrl = base_ + kDevicesEndpoint + "?device_id=eq." + deviceId;
     Patch(patchUrl, "{\"trigger_measurement\":false}");
-    Serial.println(F("[Cloud] trigger_measurement — running immediate cycle"));
+    Log.println(F("[Cloud] trigger_measurement — running immediate cycle"));
     return true;
 }

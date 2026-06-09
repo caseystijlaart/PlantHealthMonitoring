@@ -1,4 +1,5 @@
 #include "MonitoringSystem.hpp"
+#include "CloudLogger.hpp"
 
 #include <Arduino.h>
 
@@ -44,7 +45,7 @@ MonitoringCycleResult MonitoringSystem::RunCycleDetailed()
     // Skip cycle if soil sensor read is invalid (disconnected / shorted)
     if (snapshot.soilMoisturePct < 0.0f)
     {
-        Serial.println("[MonitoringSystem] Soil sensor returned invalid reading — skipping cycle");
+        Log.println("[MonitoringSystem] Soil sensor returned invalid reading — skipping cycle");
         return MonitoringCycleResult{};
     }
 

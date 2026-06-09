@@ -1,4 +1,5 @@
 #include "FileStorageService.hpp"
+#include "CloudLogger.hpp"
 
 #include <algorithm>
 #include <ctime>
@@ -97,7 +98,7 @@ void FileStorageService::WritePaired(const String &ssid,
     File f = LittleFS.open(kPairingFile, "w");
     if (!f)
     {
-        Serial.println(F("[FS] Failed to write pairing document"));
+        Log.println(F("[FS] Failed to write pairing document"));
         return;
     }
     f.print("paired\n");
@@ -106,7 +107,7 @@ void FileStorageService::WritePaired(const String &ssid,
     f.print(apiKey);      f.print('\n');
     f.print(supabaseUrl); f.print('\n');
     f.close();
-    Serial.println(F("[FS] Pairing document → paired"));
+    Log.println(F("[FS] Pairing document → paired"));
 }
 
 void FileStorageService::WriteUnpaired()
@@ -114,12 +115,12 @@ void FileStorageService::WriteUnpaired()
     File f = LittleFS.open(kPairingFile, "w");
     if (!f)
     {
-        Serial.println(F("[FS] Failed to write pairing document"));
+        Log.println(F("[FS] Failed to write pairing document"));
         return;
     }
     f.print("unpaired\n");
     f.close();
-    Serial.println(F("[FS] Pairing document → unpaired"));
+    Log.println(F("[FS] Pairing document → unpaired"));
 }
 
 bool FileStorageService::ReadPairing(String &ssidOut,
@@ -131,7 +132,7 @@ bool FileStorageService::ReadPairing(String &ssidOut,
 
     if (!LittleFS.exists(kPairingFile))
     {
-        Serial.println(F("[FS] Pairing document not found — creating as unpaired"));
+        Log.println(F("[FS] Pairing document not found — creating as unpaired"));
         WriteUnpaired();
         return false;
     }
@@ -166,7 +167,7 @@ void FileStorageService::ClearHistory(const char *filePath)
     if (LittleFS.exists(filePath))
     {
         LittleFS.remove(filePath);
-        Serial.println(F("[FS] Sensor history cleared"));
+        Log.println(F("[FS] Sensor history cleared"));
     }
 }
 
@@ -298,7 +299,7 @@ bool FileStorageService::AppendToHistoryFile(const char *filePath,
                 rewrite.println(l);
             }
             rewrite.close();
-            Serial.println(F("[FS] History file trimmed"));
+            Log.println(F("[FS] History file trimmed"));
         }
     }
     return true;

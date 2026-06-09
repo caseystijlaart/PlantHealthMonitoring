@@ -14,6 +14,8 @@
 #include "ProvisioningService.hpp"
 #include "WiFiCommunication.hpp"
 #include "CloudService.hpp"
+#include "CloudLogger.hpp"
+#include "Certs.hpp"
 
 /** File paths */
 static constexpr const char *kHistoryFile = "/sensor_history.csv";
@@ -61,6 +63,10 @@ static String DeriveDeviceName()
 
 static void PerformFactoryReset()
 {
+    // Flush any pending logs while we still have a device_id and credentials —
+    // after the wipe + reboot they'd be lost.
+    Log.uploadPending(gDeviceId, gDeviceName);
+
     fileStorage.ClearHistory(kHistoryFile);
     fileStorage.WriteUnpaired();
     cloud.DeleteDevice(gDeviceId);
@@ -78,7 +84,7 @@ static void RunMonitoringCycle()
 
     if (gPlantLabel.isEmpty())
     {
-        Serial.println(F("[Cycle] No plant label — skipping upload"));
+        Log.println(F("[Cycle] No plant label — skipping upload"));
         return;
     }
 
@@ -86,11 +92,13 @@ static void RunMonitoringCycle()
     const auto &snap = result.snapshot;
     const auto &rec  = result.recommendation;
 
+    // plant_readings is plant-scoped: the app queries/subscribes by plant_label
+    // and never reads device_id from this table, and device_id is volatile
+    // (regenerated on re-provision), so it is intentionally left out here.
     char json[512];
     snprintf(json, sizeof(json),
              "{\"request_id\":%lld,"
              "\"plant_label\":\"%s\","
-             "\"device_id\":\"%s\","
              "\"soil_moisture_pct\":%.2f,\"temperature_c\":%.2f,"
              "\"humidity_pct\":%.2f,\"light_level_pct\":%.2f,"
              "\"action_water\":%s,\"action_reduce_temp\":%s,"
@@ -98,7 +106,7 @@ static void RunMonitoringCycle()
              "\"recommendation_summary\":\"%s\","
              "\"risk_class\":%d}",
              static_cast<long long>(nowUnix),
-             gPlantLabel.c_str(), gDeviceId.c_str(),
+             gPlantLabel.c_str(),
              snap.soilMoisturePct, snap.temperatureC,
              snap.humidityPct,     snap.lightLevelPct,
              rec.water        ? "true" : "false",
@@ -113,7 +121,7 @@ static void RunMonitoringCycle()
 /** Provisioning mode */
 static void RunProvisioningMode()
 {
-    Serial.println(F("[Prov] Entering BLE provisioning mode"));
+    Log.println(F("[Prov] Entering BLE provisioning mode"));
 
     gDeviceId = ProvisioningService::getOrCreateDeviceId();
     ProvisioningService::begin(gDeviceName.c_str(), gDeviceId);
@@ -129,7 +137,7 @@ static void RunProvisioningMode()
     const String apiKey      = ProvisioningService::getApiKey();
     const String supabaseUrl = ProvisioningService::getSupabaseUrl();
 
-    Serial.println(F("[Prov] Credentials received — stopping BLE"));
+    Log.println(F("[Prov] Credentials received — stopping BLE"));
     ProvisioningService::stop();
 
     wifi.SetCredentials(ssid, password);
@@ -137,7 +145,7 @@ static void RunProvisioningMode()
 
     if (!wifi.IsConnected())
     {
-        Serial.println(F("[Prov] WiFi failed — rebooting"));
+        Log.println(F("[Prov] WiFi failed — rebooting"));
         NvsStorage::clearAll();
         delay(2000);
         ESP.restart();
@@ -158,7 +166,7 @@ static void RunProvisioningMode()
     fileStorage.WritePaired(ssid, password, apiKey, supabaseUrl);
 
     gJustProvisioned = true;
-    Serial.println(F("[Prov] Provisioning complete"));
+    Log.println(F("[Prov] Provisioning complete"));
 }
 
 /** Main application entry point */
@@ -169,27 +177,32 @@ void setup()
 
     gDeviceId   = NvsStorage::readString("device_id");
     gDeviceName = DeriveDeviceName();
-    Serial.printf("[Init] Device name: %s\n", gDeviceName.c_str());
+    Log.printf("[Init] Device name: %s\n", gDeviceName.c_str());
 
     String ssid, password, apiKey, supabaseUrl;
     const bool paired = fileStorage.ReadPairing(ssid, password, apiKey, supabaseUrl);
 
     if (!paired)
     {
-        Serial.println(F("[Init] Not paired — entering BLE provisioning mode"));
+        Log.println(F("[Init] Not paired — entering BLE provisioning mode"));
         RunProvisioningMode();
         // After RunProvisioningMode returns, re-read the just-written values.
         fileStorage.ReadPairing(ssid, password, apiKey, supabaseUrl);
     }
     else
     {
-        Serial.printf("[Init] Paired — device_id: %s\n", gDeviceId.c_str());
+        Log.printf("[Init] Paired — device_id: %s\n", gDeviceId.c_str());
     }
 
     String base = supabaseUrl;
     if (!base.endsWith("/rest/v1"))
         base += "/rest/v1";
     cloud.SetConfig(base, apiKey);
+
+    // Mirror serial output to the cloud `logs` table.  Lines emitted earlier in
+    // boot/provisioning were queued and flush on the first uploadPending() once
+    // WiFi is up.
+    Log.configure(base, apiKey, kSupabaseRootCA);
 
     wifi.SetCredentials(ssid, password);
     wifi.EnsureConnected();
@@ -209,7 +222,7 @@ void setup()
 
         if (gPlantLabel.isEmpty() && !gJustProvisioned)
         {
-            Serial.println(F("[Init] Paired but no plant_settings — resetting"));
+            Log.println(F("[Init] Paired but no plant_settings — resetting"));
             PerformFactoryReset();
         }
     }
@@ -226,16 +239,16 @@ void setup()
     if (!snapshots.empty())
     {
         monitoringSystem.LoadHistoricalSnapshots(snapshots);
-        Serial.printf("[Init] Restored %u snapshots\n", static_cast<unsigned>(snapshots.size()));
+        Log.printf("[Init] Restored %u snapshots\n", static_cast<unsigned>(snapshots.size()));
     }
 
     if (!monitoringSystem.Init())
     {
-        Serial.println(F("[Init] Monitoring system failed to initialise"));
+        Log.println(F("[Init] Monitoring system failed to initialise"));
         while (true) {}
     }
 
-    Serial.println(F("[Init] Ready"));
+    Log.println(F("[Init] Ready"));
 
     if (!gPlantLabel.isEmpty())
     {
@@ -244,10 +257,13 @@ void setup()
     }
     else
     {
-        Serial.println(F("[Init] Waiting for plant setup in app"));
+        Log.println(F("[Init] Waiting for plant setup in app"));
     }
 
     lastRun = lastCommandCheck = millis();
+
+    // Flush everything logged during boot now that we're online.
+    Log.uploadPending(gDeviceId, gDeviceName);
 }
 
 void loop()
@@ -265,7 +281,7 @@ void loop()
         {
             if (cloud.FetchPlantLabel(gDeviceId, gPlantLabel))
             {
-                Serial.println(F("[Loop] Plant label acquired — running first cycle"));
+                Log.println(F("[Loop] Plant label acquired — running first cycle"));
                 PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
                 cloud.FetchProfileSettings(gPlantLabel, profile, currentVersion, currentVersion);
                 strncpy(profile.plantName, gPlantLabel.c_str(), sizeof(profile.plantName) - 1);
@@ -279,10 +295,10 @@ void loop()
             {
                 if (++gNoPlantCount >= kMaxNoPlantTicks)
                 {
-                    Serial.println(F("[Loop] Grace period expired — resetting"));
+                    Log.println(F("[Loop] Grace period expired — resetting"));
                     PerformFactoryReset();
                 }
-                Serial.printf("[Loop] No plant label (%u/%u)\n", gNoPlantCount, kMaxNoPlantTicks);
+                Log.printf("[Loop] No plant label (%u/%u)\n", gNoPlantCount, kMaxNoPlantTicks);
             }
         }
         else if (!gPlantLabel.isEmpty())
@@ -292,7 +308,7 @@ void loop()
 
         if (cloud.CheckTriggerReset(gDeviceId))
         {
-            Serial.println(F("[Cloud] trigger_reset — performing factory reset"));
+            Log.println(F("[Cloud] trigger_reset — performing factory reset"));
             PerformFactoryReset();
         }
 
@@ -302,6 +318,9 @@ void loop()
             cloud.UpdateLastSeen(gDeviceId, timeService.GetCurrentUnixTimeUtc());
             lastRun = now;
         }
+
+        // Ship any log lines accumulated since the last poll.
+        Log.uploadPending(gDeviceId, gDeviceName);
     }
 
     if (now - lastRun < kIntervalMs)

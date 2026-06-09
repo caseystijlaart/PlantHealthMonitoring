@@ -1,4 +1,5 @@
 #include "TimeService.hpp"
+#include "CloudLogger.hpp"
 
 #include <WiFi.h>
 
@@ -40,14 +41,14 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
 {
     if (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println("Cannot sync time: WiFi not connected");
+        Log.println("Cannot sync time: WiFi not connected");
         synced_ = false;
         return false;
     }
 
     configTzTime("CET-1CEST,M3.5.0/2,M10.5.0/3", "pool.ntp.org", "time.nist.gov", "time.google.com");
 
-    Serial.println("Syncing time with NTP...");
+    Log.println("Syncing time with NTP...");
     struct tm timeInfo{};
     const unsigned long start = millis();
 
@@ -58,18 +59,18 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
             char buffer[32];
             strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeInfo);
 
-            Serial.print("NTP time synced. Local time: ");
-            Serial.println(buffer);
+            Log.print("NTP time synced. Local time: ");
+            Log.println(buffer);
 
             synced_ = true;
             return true;
         }
 
-        Serial.println("Waiting for NTP time...");
+        Log.println("Waiting for NTP time...");
         delay(500);
     }
 
-    Serial.println("NTP time sync failed");
+    Log.println("NTP time sync failed");
     synced_ = false;
     return false;
 }

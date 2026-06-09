@@ -42,7 +42,7 @@ const char *CloudLogger::classify(const String &line)
     return "OK";
 }
 
-void CloudLogger::configure(const char *baseUrl, const char *apiKey, const char *caCert)
+void CloudLogger::configure(const String &baseUrl, const String &apiKey, const char *caCert)
 {
     baseUrl_ = baseUrl;
     apiKey_  = apiKey;
@@ -82,7 +82,7 @@ String CloudLogger::jsonEscape(const String &s)
 void CloudLogger::uploadPending(const String &deviceId, const String &deviceName)
 {
     if (queue_.empty())                  return;
-    if (baseUrl_ == nullptr)             return;
+    if (baseUrl_.isEmpty())              return;
     if (deviceId.isEmpty())              return;
     if (WiFi.status() != WL_CONNECTED)   return;
 

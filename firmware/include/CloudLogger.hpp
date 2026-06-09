@@ -31,10 +31,12 @@ public:
 
     // Supabase REST endpoint + credentials used for uploads.
     // baseUrl is e.g. "https://<proj>.supabase.co/rest/v1"; "/logs" is appended.
-    void configure(const char *baseUrl, const char *apiKey, const char *caCert);
+    // The values are copied — they may come from a temporary String.
+    void configure(const String &baseUrl, const String &apiKey, const char *caCert);
 
     // Upload all queued lines as a single batched insert into `logs`.
-    // No-op when the queue is empty, WiFi is down, or deviceId is empty.
+    // No-op when the queue is empty, WiFi is down, deviceId is empty, or the
+    // logger has not been configured yet.
     // The `timestamp` column is stamped by the database (default now()).
     void uploadPending(const String &deviceId, const String &deviceName);
 
@@ -47,9 +49,9 @@ private:
 
     String             line_;
     std::vector<Entry> queue_;
-    const char        *baseUrl_ = nullptr;
-    const char        *apiKey_  = nullptr;
-    const char        *caCert_  = nullptr;
+    String             baseUrl_;
+    String             apiKey_;
+    const char        *caCert_ = nullptr;
 
     static constexpr size_t kMaxLine   = 240; // per-line cap (chars)
     static constexpr size_t kMaxQueued = 60;  // ring-buffer cap (lines)
