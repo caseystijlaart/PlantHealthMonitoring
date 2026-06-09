@@ -665,6 +665,7 @@ void setup()
     // Route serial output to the cloud `logs` table too.  Lines emitted before
     // WiFi is up (boot, provisioning) are queued and flushed once online.
     Log.configure(kSupabaseBase, API_KEY, kSupabaseRootCA);
+    Log.setTimeProvider([]() -> int64_t { return timeService.GetCurrentUnixTimeUtc(); });
 
     // ── Load identity ─────────────────────────────────────────────────────────
 #ifdef WIFI_SSID

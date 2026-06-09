@@ -1,5 +1,7 @@
 #include "CloudLogger.hpp"
 
+#include <time.h>
+
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -27,7 +29,7 @@ void CloudLogger::finishLine()
     if (line_.isEmpty()) return;
     if (queue_.size() >= kMaxQueued)
         queue_.erase(queue_.begin());   // drop the oldest line if we overflow
-    queue_.push_back({ classify(line_), line_ });
+    queue_.push_back({ classify(line_), line_, millis() });
     line_ = "";
 }
 
@@ -47,6 +49,19 @@ void CloudLogger::configure(const char *baseUrl, const char *apiKey, const char 
     baseUrl_ = baseUrl;
     apiKey_  = apiKey;
     caCert_  = caCert;
+}
+
+void CloudLogger::setTimeProvider(int64_t (*nowUnixUtc)())
+{
+    nowUnixUtc_ = nowUnixUtc;
+}
+
+String CloudLogger::toIso8601(int64_t unixUtc)
+{
+    char buf[21];
+    const time_t t = static_cast<time_t>(unixUtc);
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", gmtime(&t));
+    return String(buf);
 }
 
 String CloudLogger::jsonEscape(const String &s)
@@ -86,19 +101,31 @@ void CloudLogger::uploadPending(const String &deviceId, const String &deviceName
     if (deviceId.isEmpty())              return;
     if (WiFi.status() != WL_CONNECTED)   return;
 
+    // Every row needs a timestamp, so wait for a valid clock.  Lines stay queued
+    // and retry on the next flush until the time is known (usually right after
+    // NTP sync, before the first upload).
+    const int64_t uploadUnix = nowUnixUtc_ ? nowUnixUtc_() : 0;
+    if (uploadUnix <= 0) return;
+    const uint32_t uploadMillis = millis();
+
     // One JSON array → PostgREST inserts every queued line in a single request.
     const String dId   = jsonEscape(deviceId);
     const String dName = jsonEscape(deviceName);
 
     String body;
-    body.reserve(64 * queue_.size());
+    body.reserve(80 * queue_.size());
     body = "[";
     for (unsigned i = 0; i < queue_.size(); ++i)
     {
+        // Back-compute each line's creation time from how long ago it was logged.
+        const uint32_t ageMs = uploadMillis - queue_[i].millisAt; // wraps cleanly
+        const int64_t  ts    = uploadUnix - static_cast<int64_t>(ageMs / 1000UL);
+
         if (i) body += ",";
         body += "{\"device_id\":\"";      body += dId;
         body += "\",\"device_name\":\"";  body += dName;
         body += "\",\"status\":\"";       body += queue_[i].status;
+        body += "\",\"timestamp\":\"";    body += toIso8601(ts);
         body += "\",\"message\":\"";      body += jsonEscape(queue_[i].message);
         body += "\"}";
     }
