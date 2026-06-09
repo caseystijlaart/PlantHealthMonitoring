@@ -705,6 +705,20 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
             child: Text('Provision Device', style: _ts(15, color: _bg, fw: FontWeight.w600)),
           ),
         ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: _textMid,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            // Nothing has been sent to the device yet, so cancelling just
+            // returns to the device list.
+            onPressed: _formBusy ? null : () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: _ts(15, color: _textMid, fw: FontWeight.w600)),
+          ),
+        ),
       ],
     ),
   );
@@ -802,7 +816,7 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
         if (!mounted) return;
         setState(() {
           _saving = false;
-          _error = 'A plant named "$name" already exists. Please choose a different name.';
+          _error = 'That name is already taken. Please pick a different one for your plant.';
         });
         return;
       }
@@ -822,7 +836,7 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
           if (!mounted) return;
           setState(() {
             _saving = false;
-            _error = 'A plant named "$name" has past readings. Please choose a different name.';
+            _error = 'That name was used by an earlier plant and still has readings. Please pick a different one.';
           });
           return;
         }
@@ -842,20 +856,26 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
       Navigator.of(context).popUntil((r) => r.isFirst);
     } on PostgrestException catch (e) {
       if (!mounted) return;
-      // 23505 = unique_violation — another plant grabbed this name in the race
-      // window between the check above and the insert.
-      final duplicate = e.code == '23505';
+      // A duplicate name can still slip through the pre-check (e.g. row-level
+      // security hides the existing row, or a race between check and insert),
+      // in which case the unique index rejects the insert.  The duplicate may
+      // surface as SQLSTATE 23505 in the code or only in the message, so match
+      // both rather than relying on one.
+      final msg = e.message.toLowerCase();
+      final isDuplicate = e.code == '23505' ||
+          msg.contains('duplicate key') ||
+          msg.contains('unique constraint');
       setState(() {
         _saving = false;
-        _error = duplicate
-            ? 'A plant named "$name" already exists. Please choose a different name.'
-            : 'Failed to save: ${e.message}';
+        _error = isDuplicate
+            ? 'That name is already taken. Please pick a different one for your plant.'
+            : 'Something went wrong while saving. Please try again.';
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = 'Failed to save: $e';
+        _error = 'Something went wrong while saving. Please try again.';
       });
     }
   }
@@ -973,11 +993,58 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
                       : Text('Add Plant', style: _ts(15, color: _bg, fw: FontWeight.w600)),
                 ),
               ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: _textMid,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: _saving ? null : _cancelSetup,
+                  child: Text('Cancel', style: _ts(15, color: _textMid, fw: FontWeight.w600)),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _cancelSetup() async {
+    // The device is already provisioned at this point but has no plant_settings
+    // row.  Abandoning here leaves it idle; the firmware's grace period returns
+    // it to BLE setup mode on its own.  Confirm so it isn't an accidental tap.
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: _border),
+        ),
+        title: Text('Cancel setup?', style: _ts(16, color: _textHigh, fw: FontWeight.w600)),
+        content: Text(
+          'Your device is connected but no plant has been added yet. '
+          'It will return to setup mode shortly, and you can add it again any time.',
+          style: _ts(14, color: _textMid),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Keep setting up', style: _ts(14, color: _textLow)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Cancel setup', style: _ts(14, color: _red, fw: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (leave == true && mounted) {
+      Navigator.of(context).popUntil((r) => r.isFirst);
+    }
   }
 }
 
