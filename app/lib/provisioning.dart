@@ -778,6 +778,24 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
     });
 
     try {
+      // Plant names are immutable and must be unique across all plants, so a
+      // reading's plant_label always maps to exactly one plant.  Check up front
+      // for a friendly message (case-insensitive); the unique index on
+      // plant_settings.plant_label is the authoritative guard against races.
+      final existing = await _db
+          .from('plant_settings')
+          .select('plant_label')
+          .ilike('plant_label', name)
+          .limit(1);
+      if (existing.isNotEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _saving = false;
+          _error = 'A plant named "$name" already exists. Please choose a different name.';
+        });
+        return;
+      }
+
       await _db.from('plant_settings').insert({
         'plant_label':            name,
         'device_id':              widget.deviceId,
@@ -790,6 +808,17 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
       if (!mounted) return;
       // Pop all the way back to the dashboard, which will reload its plant list
       Navigator.of(context).popUntil((r) => r.isFirst);
+    } on PostgrestException catch (e) {
+      if (!mounted) return;
+      // 23505 = unique_violation — another plant grabbed this name in the race
+      // window between the check above and the insert.
+      final duplicate = e.code == '23505';
+      setState(() {
+        _saving = false;
+        _error = duplicate
+            ? 'A plant named "$name" already exists. Please choose a different name.'
+            : 'Failed to save: ${e.message}';
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
