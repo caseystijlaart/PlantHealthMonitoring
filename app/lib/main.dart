@@ -182,7 +182,7 @@ void main() async {
   tz_data.initializeTimeZones();
   try {
     final localTz = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(localTz));
+    tz.setLocalLocation(tz.getLocation(localTz.identifier));
   } catch (_) {
     // Fall back to UTC if timezone detection fails.
   }
@@ -557,8 +557,8 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const Dashboard(),
-        transitionsBuilder: (_, anim, __, child) =>
+        pageBuilder: (_, _, _) => const Dashboard(),
+        transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 600),
       ),
@@ -588,7 +588,7 @@ class _SplashScreenState extends State<SplashScreen>
           // ── Grid background ──────────────────────────────────────────
           AnimatedBuilder(
             animation: _gridOpacity,
-            builder: (_, __) => Opacity(
+            builder: (_, _) => Opacity(
               opacity: _gridOpacity.value,
               child: CustomPaint(size: size, painter: _GridPainter()),
             ),
@@ -598,7 +598,7 @@ class _SplashScreenState extends State<SplashScreen>
           Positioned.fill(
             child: AnimatedBuilder(
               animation: _glowPulse,
-              builder: (_, __) => Center(
+              builder: (_, _) => Center(
                 child: Transform.scale(
                   scale: _glowPulse.value,
                   child: Container(
@@ -620,7 +620,7 @@ class _SplashScreenState extends State<SplashScreen>
           Positioned.fill(
             child: AnimatedBuilder(
               animation: _ringCtrl,
-              builder: (_, __) => Center(
+              builder: (_, _) => Center(
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -672,7 +672,7 @@ class _SplashScreenState extends State<SplashScreen>
             right: 28,
             child: AnimatedBuilder(
               animation: _dotCtrl,
-              builder: (_, __) => Stack(
+              builder: (_, _) => Stack(
                 alignment: Alignment.center,
                 children: [
                   Opacity(
@@ -710,7 +710,7 @@ class _SplashScreenState extends State<SplashScreen>
                 // Icon
                 AnimatedBuilder(
                   animation: _iconCtrl,
-                  builder: (_, __) => Opacity(
+                  builder: (_, _) => Opacity(
                     opacity: _iconOpacity.value,
                     child: Transform.translate(
                       offset: Offset(0, _iconY.value),
@@ -726,7 +726,7 @@ class _SplashScreenState extends State<SplashScreen>
                 // Title
                 AnimatedBuilder(
                   animation: _fadeCtrl,
-                  builder: (_, __) => Opacity(
+                  builder: (_, _) => Opacity(
                     opacity: _titleOpacity.value,
                     child: Transform.translate(
                       offset: Offset(0, _titleY.value),
@@ -776,7 +776,7 @@ class _SplashScreenState extends State<SplashScreen>
                 // Tagline
                 AnimatedBuilder(
                   animation: _fadeCtrl,
-                  builder: (_, __) => Opacity(
+                  builder: (_, _) => Opacity(
                     opacity: _taglineOpacity.value,
                     child: Text(
                       'SMART PLANT COMPANION',
@@ -794,7 +794,7 @@ class _SplashScreenState extends State<SplashScreen>
                 // Feature pills
                 AnimatedBuilder(
                   animation: _fadeCtrl,
-                  builder: (_, __) => Opacity(
+                  builder: (_, _) => Opacity(
                     opacity: _pillsOpacity.value,
                     child: Transform.translate(
                       offset: Offset(0, _pillsY.value),
@@ -816,7 +816,7 @@ class _SplashScreenState extends State<SplashScreen>
                 // Progress bar
                 AnimatedBuilder(
                   animation: _barCtrl,
-                  builder: (_, __) => Opacity(
+                  builder: (_, _) => Opacity(
                     opacity: _barProgress.value > 0 ? 1 : 0,
                     child: SizedBox(
                       width: 160,
@@ -1151,13 +1151,10 @@ class _DashboardState extends State<Dashboard> {
   String _humidityPref = 'mid';
   String _lightPref    = 'mid';
 
-  // device_id map: plant_label → device_id (null if not linked yet)
-  Map<String, String?> _deviceIds = {};
-  bool _measuring = false;
-  Timer? _measureTimeout;
-
   Color _statusColor = AppColors.surface;
   bool _loading = false;
+  bool _triggeringMeasurement = false;
+  DateTime? _lastReadingTime;
   RealtimeChannel? _realtimeChannel;
 
   // ── Easter egg state ──
@@ -1257,15 +1254,11 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> loadPlants() async {
-    final res = await supabase.from('plant_settings').select('plant_label, device_id');
+    final res = await supabase.from('plant_settings').select('plant_label');
     final list = (res as List).map((e) => e['plant_label'] as String).toList();
-    final ids  = Map<String, String?>.fromEntries(
-      (res as List).map((e) => MapEntry(e['plant_label'] as String, e['device_id'] as String?)),
-    );
     if (!mounted) return;
     setState(() {
-      plants     = list;
-      _deviceIds = ids;
+      plants = list;
       if (!plants.contains(selectedPlant)) selectedPlant = null;
     });
   }
@@ -1337,6 +1330,8 @@ class _DashboardState extends State<Dashboard> {
       _tempC = (latest['temperature_c'] as num?)?.toDouble();
       _humidityPct = (latest['humidity_pct'] as num?)?.toDouble();
       _lightPct = (latest['light_level_pct'] as num?)?.toDouble();
+      final tsRaw = latest['timestamp'] as String?;
+      _lastReadingTime = tsRaw != null ? DateTime.tryParse(tsRaw)?.toLocal() : null;
 
       switch (risk) {
         case 0:
@@ -1366,6 +1361,53 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
+  Future<void> _triggerMeasurement() async {
+    if (selectedPlant == null) return;
+    setState(() => _triggeringMeasurement = true);
+    try {
+      // Look up the device_id for the selected plant
+      final res = await supabase
+          .from('plant_settings')
+          .select('device_id')
+          .eq('plant_label', selectedPlant!)
+          .limit(1);
+      if (res.isEmpty || res[0]['device_id'] == null) {
+        _showEasterEgg('No device linked to this plant.');
+        return;
+      }
+      final deviceId = res[0]['device_id'] as String;
+      // Set trigger_measurement = true — ESP32 polls this and fires a reading
+      await supabase
+          .from('devices')
+          .update({'trigger_measurement': true})
+          .eq('device_id', deviceId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Measurement requested — updating shortly…',
+              style: GoogleFonts.outfit(color: AppColors.textHigh, fontSize: 13)),
+          backgroundColor: AppColors.surface2,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          duration: const Duration(seconds: 3),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to request measurement: $e',
+              style: GoogleFonts.outfit(color: AppColors.textHigh, fontSize: 13)),
+          backgroundColor: AppColors.high,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _triggeringMeasurement = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1386,14 +1428,7 @@ class _DashboardState extends State<Dashboard> {
             if (plant == null) return;
 
             // Always refresh UI if this is the selected plant.
-            if (plant == selectedPlant) {
-              loadLatestStatus();
-              // Clear the "measuring" spinner if it was triggered manually
-              if (_measuring) {
-                _measureTimeout?.cancel();
-                if (mounted) setState(() => _measuring = false);
-              }
-            }
+            if (plant == selectedPlant) loadLatestStatus();
 
             // Fire a notification for any non-healthy insert, for any plant.
             final risk = (row['risk_class'] ?? 0) as int;
@@ -1416,7 +1451,6 @@ class _DashboardState extends State<Dashboard> {
     if (_realtimeChannel != null) supabase.removeChannel(_realtimeChannel!);
     _iconTapTimer?.cancel();
     _readingsTapTimer?.cancel();
-    _measureTimeout?.cancel();
     super.dispose();
   }
 
@@ -1437,40 +1471,6 @@ class _DashboardState extends State<Dashboard> {
     if (!mounted || selected == null) return;
     setState(() => selectedPlant = selected);
     await loadLatestStatus();
-  }
-
-  Future<void> _openAddDevice() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DeviceScanScreen()),
-    );
-    // Reload plants in case a new one was just provisioned
-    if (mounted) await loadPlants();
-  }
-
-  Future<void> _triggerMeasurement() async {
-    final deviceId = _deviceIds[selectedPlant];
-    if (deviceId == null || deviceId.isEmpty) {
-      _showEasterEgg("⚠️ This plant has no linked device.");
-      return;
-    }
-    setState(() => _measuring = true);
-    try {
-      await supabase
-          .from('devices')
-          .update({'trigger_measurement': true})
-          .eq('device_id', deviceId);
-      // The realtime subscription will pick up the incoming reading and clear
-      // _measuring automatically.  Fall back after 2 minutes.
-      _measureTimeout?.cancel();
-      _measureTimeout = Timer(const Duration(minutes: 2), () {
-        if (mounted) setState(() => _measuring = false);
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() => _measuring = false);
-        _showEasterEgg("❌ Could not trigger measurement: $e");
-      }
-    }
   }
 
   Widget buildPlantSelector() {
@@ -1576,7 +1576,18 @@ class _DashboardState extends State<Dashboard> {
       children: [
         GestureDetector(
           onTap: _onReadingsTap,
-          child: Text("LIVE READINGS", style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textLow, letterSpacing: 1.8)),
+          child: Row(
+            children: [
+              Text("LAST READING", style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textLow, letterSpacing: 1.8)),
+              if (_lastReadingTime != null) ...[
+                Text(": ", style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textLow, letterSpacing: 1.8)),
+                Text(
+                  _formatReadingTime(_lastReadingTime!),
+                  style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textMid, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         Row(children: [
@@ -1592,6 +1603,18 @@ class _DashboardState extends State<Dashboard> {
         ]),
       ],
     );
+  }
+
+  String _formatReadingTime(DateTime t) {
+    final now = DateTime.now();
+    final diff = now.difference(t);
+    if (diff.inMinutes < 1)  return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours   < 24) return '${diff.inHours}h ago';
+    if (diff.inDays    < 7)  return '${diff.inDays}d ago';
+    // Older than a week — show date + time
+    final pad = (int n) => n.toString().padLeft(2, '0');
+    return '${t.day}/${t.month} ${pad(t.hour)}:${pad(t.minute)}';
   }
 
   String _fmtMinutes(double minutes) {
@@ -1622,7 +1645,7 @@ class _DashboardState extends State<Dashboard> {
     final displayColor = noPlant ? AppColors.textLow : _statusColor;
     final displayLabel = noPlant ? "UNKNOWN" : _riskLabel;
     final displayRec   = noPlant ? "Select a plant to see recommendations" : _recommendationText;
-    final borderColor = displayColor.withOpacity(0.4);
+    final borderColor = displayColor.withValues(alpha: 0.4);
 
     return Container(
       width: double.infinity,
@@ -1645,7 +1668,7 @@ class _DashboardState extends State<Dashboard> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: displayColor,
-                    boxShadow: [BoxShadow(color: displayColor.withOpacity(0.5), blurRadius: 6)],
+                    boxShadow: [BoxShadow(color: displayColor.withValues(alpha: 0.5), blurRadius: 6)],
                   ),
                 ),
               ),
@@ -1756,33 +1779,28 @@ class _DashboardState extends State<Dashboard> {
                             buildSensorGrid(),
                             if (selectedPlant != null) ...[
                               const SizedBox(height: 20),
-                              // ── Measure Now ──────────────────────────────
-                              if (_deviceIds[selectedPlant] != null &&
-                                  _deviceIds[selectedPlant]!.isNotEmpty)
-                                FilledButton.icon(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: _measuring
-                                        ? AppColors.surface2
-                                        : AppColors.accentDim,
-                                    foregroundColor: AppColors.textHigh,
-                                    minimumSize: const Size.fromHeight(44),
-                                  ),
-                                  onPressed: _measuring ? null : _triggerMeasurement,
-                                  icon: _measuring
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.accent,
-                                          ),
-                                        )
-                                      : const Icon(Icons.sensors, size: 16),
-                                  label: Text(
-                                    _measuring ? "Measuring…" : "Measure Now",
-                                  ),
+                              FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.surface2,
+                                  foregroundColor: AppColors.accent,
+                                  side: const BorderSide(color: AppColors.border),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                              const SizedBox(height: 8),
+                                onPressed: _triggeringMeasurement ? null : _triggerMeasurement,
+                                icon: _triggeringMeasurement
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                                      )
+                                    : const Icon(Icons.sensors, size: 16),
+                                label: Text(
+                                  _triggeringMeasurement ? "Requesting…" : "Get Live Measurement",
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               OutlinedButton.icon(
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -1849,10 +1867,8 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
       (AppSettings.dailyReportMinute - a).abs() <= (AppSettings.dailyReportMinute - b).abs() ? a : b);
 
   List<String> _plants = [];
-
-  // Connected devices: list of {device_id, plant_label, status, last_seen}
-  List<Map<String, dynamic>> _connectedDevices = [];
-  bool _devicesLoading = false;
+  List<Map<String, dynamic>> _devices = []; // {plant_label, device_id, online}
+  bool _devicesLoading = true;
 
   @override
   void initState() {
@@ -1868,58 +1884,47 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
   }
 
   Future<void> _loadDevices() async {
-    if (!mounted) return;
     setState(() => _devicesLoading = true);
-    try {
-      // Fetch all plant_settings rows that have a device linked
-      final psRes = await supabase
-          .from('plant_settings')
-          .select('plant_label, device_id')
-          .not('device_id', 'is', null);
 
-      final List<Map<String, dynamic>> result = [];
-      for (final row in psRes as List) {
-        final deviceId = row['device_id'] as String?;
-        if (deviceId == null || deviceId.isEmpty) continue;
-        // Fetch device info
-        final devRes = await supabase
-            .from('devices')
-            .select('status, last_seen')
-            .eq('device_id', deviceId)
-            .limit(1);
-        if (devRes.isNotEmpty) {
-          result.add({
-            'device_id':   deviceId,
-            'plant_label': row['plant_label'],
-            'status':      devRes[0]['status'] ?? 'unknown',
-            'last_seen':   devRes[0]['last_seen'],
-          });
-        }
+    // Join plant_settings with devices to get last_seen for online status.
+    // Only include rows that have a device_id (provisioned devices).
+    final settings = await supabase
+        .from('plant_settings')
+        .select('plant_label, device_id, devices(last_seen)')
+        .not('device_id', 'is', null);
+    if (!mounted) return;
+
+    final cutoff = DateTime.now().toUtc().subtract(const Duration(hours: 4));
+    final results = (settings as List).cast<Map<String, dynamic>>().map((d) {
+      final deviceRow = d['devices'] as Map<String, dynamic>?;
+      final lastSeenStr = deviceRow?['last_seen'] as String?;
+      bool online = false;
+      if (lastSeenStr != null) {
+        final lastSeen = DateTime.tryParse(lastSeenStr);
+        online = lastSeen != null && lastSeen.isAfter(cutoff);
       }
-      if (!mounted) return;
-      setState(() => _connectedDevices = result);
-    } finally {
-      if (mounted) setState(() => _devicesLoading = false);
-    }
+      return {...d, 'online': online};
+    }).toList();
+
+    if (!mounted) return;
+    setState(() {
+      _devices = results;
+      _devicesLoading = false;
+    });
   }
 
-  Future<void> _removeDevice(Map<String, dynamic> device) async {
-    final deviceId   = device['device_id']   as String;
-    final plantLabel = device['plant_label'] as String;
-
+  Future<void> _deleteDevice(Map<String, dynamic> device) async {
+    final deviceId = device['device_id'] as String?;
+    final plantLabel = device['plant_label'] as String? ?? 'this plant';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: Text('Remove device?',
-            style: GoogleFonts.outfit(color: AppColors.textHigh, fontSize: 16, fontWeight: FontWeight.w600)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.border)),
+        title: Text('Remove device?', style: GoogleFonts.outfit(color: AppColors.textHigh, fontWeight: FontWeight.w600)),
         content: Text(
-          'This will unlink the device from "$plantLabel" and trigger a factory reset on the ESP32 so it can be re-provisioned by someone else.\n\nAll historical readings will be kept.',
-          style: GoogleFonts.outfit(color: AppColors.textMid, fontSize: 13),
+          'This will remove "$plantLabel" and reset the ESP32 back to provisioning mode. The device will need to be paired again.',
+          style: GoogleFonts.outfit(color: AppColors.textMid, fontSize: 14),
         ),
         actions: [
           TextButton(
@@ -1928,52 +1933,38 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Remove', style: GoogleFonts.outfit(color: AppColors.high, fontWeight: FontWeight.w600)),
+            child: Text('Remove', style: GoogleFonts.outfit(color: const Color(0xFFF87171), fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
 
+    if (deviceId == null) return;
+
     try {
-      // 1. Tell the ESP32 to factory-reset on next wake
+      // Signal the ESP32 to factory-reset via the trigger_reset flag.
       await supabase
           .from('devices')
           .update({'trigger_reset': true})
           .eq('device_id', deviceId);
 
-      // 2. Unlink the device from the plant (keeps the plant_settings row)
-      await supabase
-          .from('plant_settings')
-          .update({'device_id': null})
-          .eq('device_id', deviceId);
+      // Remove plant_settings row (unlinks the plant from the UI)
+      await supabase.from('plant_settings').delete().eq('device_id', deviceId);
 
-      // 3. Refresh the list
+      // Remove the device row
+      await supabase.from('devices').delete().eq('device_id', deviceId);
+
       await _loadDevices();
+      await _loadPlants();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Failed to remove device: $e',
-            style: GoogleFonts.outfit(color: AppColors.textHigh, fontSize: 13)),
-        backgroundColor: AppColors.surface2,
+        content: Text('Failed to remove device: $e', style: GoogleFonts.outfit(color: AppColors.textHigh)),
+        backgroundColor: const Color(0xFFF87171),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.border),
-        ),
       ));
     }
-  }
-
-  String _fmtLastSeen(String? ts) {
-    if (ts == null) return 'Never';
-    final t = DateTime.tryParse(ts)?.toLocal();
-    if (t == null) return 'Unknown';
-    final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 2)  return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours   < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
   }
 
   Future<void> _applyDailyReport(bool enabled) async {
@@ -2028,6 +2019,109 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    // ── Devices section ──
+                    Text("DEVICES", style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textLow, letterSpacing: 1.8)),
+                    const SizedBox(height: 12),
+                    if (defaultTargetPlatform == TargetPlatform.android) ...[
+                      _settingsTile(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const DeviceScanScreen()),
+                            );
+                            _loadDevices();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.add_circle_outline, size: 18, color: AppColors.accent),
+                                const SizedBox(width: 12),
+                                Text('Add Device', style: GoogleFonts.outfit(color: AppColors.accent, fontSize: 15, fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      _settingsTile(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.bluetooth_disabled, size: 18, color: AppColors.textLow),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text('Add Device (Android only)', style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 14))),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    if (_devicesLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator(color: AppColors.accent, strokeWidth: 2)),
+                      )
+                    else if (_devices.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text('No connected devices.', style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 13)),
+                      )
+                    else
+                      ...(_devices.map((device) {
+                        final online = device['online'] as bool? ?? false;
+                        final label = device['plant_label'] as String? ?? 'Unknown';
+                        final id = device['device_id'] as String? ?? '';
+                        final shortId = id.length >= 8 ? id.substring(0, 8) : id;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _settingsTile(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: online ? AppColors.accent : AppColors.textLow,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(label, style: GoogleFonts.outfit(
+                                          color: online ? AppColors.textHigh : AppColors.textMid,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                        )),
+                                        Text(
+                                          online ? 'Online · $shortId…' : 'Offline · $shortId…',
+                                          style: GoogleFonts.outfit(
+                                            color: online ? AppColors.accent : AppColors.textLow,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Remove device',
+                                    onPressed: () => _deleteDevice(device),
+                                    icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFF87171)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      })),
+                    const SizedBox(height: 20),
                     Text("NOTIFICATIONS", style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textLow, letterSpacing: 1.8)),
                     const SizedBox(height: 12),
 
@@ -2107,166 +2201,10 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                       "Plant alerts fire automatically when a new reading with moderate or high risk is detected. The daily report sends one notification per day at your chosen time with the status of every plant.",
                       style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textLow),
                     ),
-
-                    const SizedBox(height: 28),
-                    // ── Connected Devices ──────────────────────────────────
-                    Row(
-                      children: [
-                        Text("CONNECTED DEVICES",
-                            style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textLow, letterSpacing: 1.8)),
-                        const Spacer(),
-                        IconButton(
-                          tooltip: "Refresh",
-                          icon: const Icon(Icons.refresh, size: 16, color: AppColors.textLow),
-                          onPressed: _loadDevices,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const DeviceScanScreen()),
-                            );
-                            _loadDevices();
-                          },
-                          icon: const Icon(Icons.add, size: 14),
-                          label: const Text("Add Device"),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.accent,
-                            side: const BorderSide(color: AppColors.accentDim),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            textStyle: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    if (_devicesLoading)
-                      const Center(child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: CircularProgressIndicator(color: AppColors.accent, strokeWidth: 2),
-                      ))
-                    else if (_connectedDevices.isEmpty)
-                      _settingsTile(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.sensors_off, size: 18, color: AppColors.textLow),
-                              const SizedBox(width: 12),
-                              Text("No devices connected",
-                                  style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 14)),
-                            ],
-                          ),
-                        ),
-                      )
-                    else
-                      _settingsTile(
-                        child: Column(
-                          children: [
-                            for (int i = 0; i < _connectedDevices.length; i++) ...[
-                              if (i > 0) Container(height: 1, color: AppColors.border),
-                              _DeviceRow(
-                                device: _connectedDevices[i],
-                                lastSeenLabel: _fmtLastSeen(_connectedDevices[i]['last_seen'] as String?),
-                                onRemove: () => _removeDevice(_connectedDevices[i]),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                    const SizedBox(height: 10),
-                    Text(
-                      "Removing a device unlinks it from its plant and sends a factory-reset command to the ESP32 so it can be re-provisioned. Historical readings are never deleted.",
-                      style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textLow),
-                    ),
                   ],
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Device row widget ────────────────────────────────────────────────────────
-class _DeviceRow extends StatelessWidget {
-  final Map<String, dynamic> device;
-  final String lastSeenLabel;
-  final VoidCallback onRemove;
-
-  const _DeviceRow({
-    required this.device,
-    required this.lastSeenLabel,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final deviceId   = device['device_id']   as String;
-    final plantLabel = device['plant_label'] as String;
-    final status     = device['status']      as String;
-    final isActive   = status == 'active';
-    final statusColor = isActive ? AppColors.accent : AppColors.textLow;
-    // Show last 8 chars of device ID to keep it readable
-    final shortId = deviceId.length > 8 ? '…${deviceId.substring(deviceId.length - 8)}' : deviceId;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          // Status dot
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: statusColor,
-              boxShadow: isActive
-                  ? [BoxShadow(color: statusColor.withOpacity(0.5), blurRadius: 5)]
-                  : null,
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(plantLabel,
-                    style: GoogleFonts.outfit(color: AppColors.textHigh, fontSize: 14, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text('ID: $shortId',
-                        style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 11)),
-                    const SizedBox(width: 8),
-                    Text('·', style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 11)),
-                    const SizedBox(width: 8),
-                    Text(lastSeenLabel,
-                        style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 11)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Remove button
-          TextButton(
-            onPressed: onRemove,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.high,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text('Remove', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500)),
           ),
         ],
       ),
@@ -2332,10 +2270,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: color.withOpacity(0.5)),
+              border: Border.all(color: color.withValues(alpha: 0.5)),
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 4),
                 ),
@@ -2571,8 +2509,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                               "Temperature",
                               temperaturePref,
                               (v) {
-                                if (v != null)
+                                if (v != null) {
                                   setState(() => temperaturePref = v);
+                                }
                               },
                             ),
                           ),
@@ -2696,7 +2635,7 @@ class _DataPageState extends State<DataPage> {
   bool _loading = false;
 
   // ── inline table state ──
-  List<String> _tableColumns = ['soil_moisture_pct'];
+  final List<String> _tableColumns = ['soil_moisture_pct'];
   List<Map<String, dynamic>> _tableRows = [];
   bool _tableLoading = false;
   bool _tableVisible = false;
@@ -2813,7 +2752,11 @@ class _DataPageState extends State<DataPage> {
           label: Text(_metricLabel(m)),
           selected: sel,
           onSelected: (v) {
-            setState(() { if (v) selectedMetrics.add(m); else selectedMetrics.remove(m); });
+            setState(() { if (v) {
+              selectedMetrics.add(m);
+            } else {
+              selectedMetrics.remove(m);
+            } });
             loadGraph();
           },
         );
@@ -2919,7 +2862,7 @@ class _DataPageState extends State<DataPage> {
             barWidth: 2,
             color: _colorFor(m),
             dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(show: true, color: _colorFor(m).withOpacity(0.06)),
+            belowBarData: BarAreaData(show: true, color: _colorFor(m).withValues(alpha: 0.06)),
           );
         }).toList(),
       ),
@@ -2942,7 +2885,11 @@ class _DataPageState extends State<DataPage> {
               label: Text(c.$2),
               selected: sel,
               onSelected: atMax ? null : (v) {
-                setState(() { if (v) _tableColumns.add(c.$1); else _tableColumns.remove(c.$1); });
+                setState(() { if (v) {
+                  _tableColumns.add(c.$1);
+                } else {
+                  _tableColumns.remove(c.$1);
+                } });
                 _fetchTable();
               },
             );
@@ -3099,7 +3046,7 @@ class DataTablePage extends StatefulWidget {
 
 class _DataTablePageState extends State<DataTablePage> {
   late List<String> _selectedPlants;
-  List<String> _selectedColumns = ['soil_moisture_pct'];
+  final List<String> _selectedColumns = ['soil_moisture_pct'];
   String _timeRange = '24h';
   List<Map<String, dynamic>> _rows = [];
   bool _loading = false;

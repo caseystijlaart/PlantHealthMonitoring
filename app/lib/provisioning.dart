@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:wifi_scan/wifi_scan.dart';
 
 // ── BLE UUIDs — must match ESP32 firmware ────────────────────────────────────
 //
@@ -27,7 +29,7 @@ const String kDeviceIdCharUuid     = 'beb5483e-36e1-4688-b7f5-ea07361b26aa';
 
 // Required Supabase migrations — see supabase/migrations.sql in the repo root.
 
-const Duration _kPollInterval       = Duration(seconds: 3);
+const Duration _kPollInterval       = Duration(seconds: 2);
 const int      _kRegistrationTimeout = 90; // seconds
 
 SupabaseClient get _db => Supabase.instance.client;
@@ -44,7 +46,6 @@ const _textLow  = Color(0xFF4A6B52);
 const _red      = Color(0xFFF87171);
 
 bool _bleSupported() =>
-    defaultTargetPlatform == TargetPlatform.iOS ||
     defaultTargetPlatform == TargetPlatform.android;
 
 TextStyle _ts(double size, {Color color = _textMid, FontWeight fw = FontWeight.w400}) =>
@@ -93,6 +94,31 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
       _error = null;
     });
 
+    // Request Bluetooth permissions (Android 12+ needs BLUETOOTH_SCAN + BLUETOOTH_CONNECT;
+    // older versions need location permission for BLE scanning).
+    final statuses = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.locationWhenInUse,
+    ].request();
+
+    final permanentlyDenied = statuses.values.any(
+      (s) => s == PermissionStatus.permanentlyDenied,
+    );
+    final denied = statuses.values.any(
+      (s) => s == PermissionStatus.denied,
+    );
+
+    if (permanentlyDenied) {
+      // User previously denied — open system app settings so they can enable it
+      await openAppSettings();
+      return;
+    }
+    if (denied) {
+      setState(() => _error = 'Bluetooth permission denied. Please allow it when prompted.');
+      return;
+    }
+
     final adapterState = await FlutterBluePlus.adapterState.first;
     if (adapterState != BluetoothAdapterState.on) {
       setState(() => _error = 'Bluetooth is off. Please enable it and try again.');
@@ -124,12 +150,23 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
     }
   }
 
+  Future<void> _cancelScan() async {
+    await FlutterBluePlus.stopScan();
+    if (mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bg,
-      appBar: _appBar('Add Device'),
-      body: !_bleSupported() ? _unsupportedBody() : _scanBody(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _cancelScan();
+      },
+      child: Scaffold(
+        backgroundColor: _bg,
+        appBar: _appBar('Add Device'),
+        body: !_bleSupported() ? _unsupportedBody() : _scanBody(),
+      ),
     );
   }
 
@@ -142,7 +179,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
           const Icon(Icons.bluetooth_disabled, size: 48, color: _textLow),
           const SizedBox(height: 16),
           Text(
-            'BLE provisioning is only available on iOS and Android.',
+            'BLE provisioning is only available on Android.',
             textAlign: TextAlign.center,
             style: _ts(15),
           ),
@@ -190,7 +227,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
             : ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: _results.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (ctx, i) {
                   final r = _results[i];
                   final name = r.device.platformName.isNotEmpty
@@ -211,26 +248,44 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
               ),
       ),
       Padding(
-        padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _textMid,
-              side: const BorderSide(color: _border),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _textMid,
+                  side: const BorderSide(color: _border),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _isScanning ? null : _startScan,
+                icon: _isScanning
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+                      )
+                    : const Icon(Icons.refresh, size: 18),
+                label: Text(_isScanning ? 'Scanning…' : 'Scan Again', style: _ts(14)),
+              ),
             ),
-            onPressed: _isScanning ? null : _startScan,
-            icon: _isScanning
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
-                  )
-                : const Icon(Icons.refresh, size: 18),
-            label: Text(_isScanning ? 'Scanning…' : 'Scan Again', style: _ts(14)),
-          ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _red,
+                  side: const BorderSide(color: _red),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _cancelScan,
+                child: Text('Cancel', style: _ts(14, color: _red)),
+              ),
+            ),
+          ],
         ),
       ),
     ],
@@ -270,9 +325,9 @@ class _DeviceTile extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: _accent.withOpacity(0.1),
+                  color: _accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _accent.withOpacity(0.3)),
+                  border: Border.all(color: _accent.withValues(alpha: 0.3)),
                 ),
                 child: const Icon(Icons.sensors, color: _accent, size: 20),
               ),
@@ -321,6 +376,11 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   bool _obscurePass = true;
   bool _formBusy = false;
 
+  // WiFi scan state
+  List<WiFiAccessPoint> _networks = [];
+  bool _scanningWifi = false;
+  String? _selectedSsid;
+
   Timer? _pollTimer;
   int _pollSeconds = 0;
 
@@ -337,6 +397,31 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
     _passCtrl.dispose();
     widget.device.disconnect();
     super.dispose();
+  }
+
+  Future<void> _scanWifi() async {
+    setState(() => _scanningWifi = true);
+    try {
+      // Ensure location permission (required for WiFi scan on Android)
+      await Permission.locationWhenInUse.request();
+
+      final can = await WiFiScan.instance.canStartScan(askPermissions: true);
+      if (can == CanStartScan.yes) {
+        await WiFiScan.instance.startScan();
+      }
+      final results = await WiFiScan.instance.getScannedResults();
+      // Deduplicate by SSID, skip hidden networks
+      final seen = <String>{};
+      final unique = results
+          .where((n) => n.ssid.isNotEmpty && seen.add(n.ssid))
+          .toList()
+        ..sort((a, b) => (b.level).compareTo(a.level));
+      if (mounted) setState(() => _networks = unique);
+    } catch (_) {
+      // If scan fails, user can still type manually
+    } finally {
+      if (mounted) setState(() => _scanningWifi = false);
+    }
   }
 
   Future<void> _connect() async {
@@ -396,11 +481,12 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
 
       setState(() {
         _step = _ProvStep.waiting;
-        _statusMsg = 'Device is connecting to WiFi…';
+        _statusMsg = 'Waiting for device to connect to WiFi…';
         _pollSeconds = 0;
       });
 
-      // Disconnect BLE — the ESP32 exits provisioning mode on its own
+      // Disconnect BLE — ESP32 will now connect to WiFi and insert
+      // itself into the devices table once online.
       await widget.device.disconnect();
       _startPolling(deviceId);
     } catch (e) {
@@ -431,11 +517,12 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
       try {
         final res = await _db
             .from('devices')
-            .select('status')
+            .select('device_id')
             .eq('device_id', deviceId)
             .limit(1);
 
-        if (res.isNotEmpty && res[0]['status'] == 'active') {
+        // As soon as the ESP32 inserts itself, move to plant setup
+        if (res.isNotEmpty) {
           t.cancel();
           if (!mounted) return;
           Navigator.of(context).pushReplacement(
@@ -496,37 +583,119 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
     ),
   );
 
-  Widget _buildForm() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _SectionHeader(
-        icon: Icons.wifi,
-        title: 'Enter WiFi credentials',
-        subtitle: 'These will be sent to your ESP32 device over BLE.',
-      ),
-      const SizedBox(height: 24),
-      _OutlineField(controller: _ssidCtrl, label: 'WiFi Network (SSID)', hint: 'My Home WiFi'),
-      const SizedBox(height: 16),
-      _PasswordField(
-        controller: _passCtrl,
-        obscure: _obscurePass,
-        onToggle: () => setState(() => _obscurePass = !_obscurePass),
-      ),
-      const SizedBox(height: 32),
-      SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: _accent,
-            foregroundColor: _bg,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          onPressed: _formBusy ? null : _provision,
-          child: Text('Provision Device', style: _ts(15, color: _bg, fw: FontWeight.w600)),
+  Widget _buildForm() => SingleChildScrollView(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          icon: Icons.wifi,
+          title: 'Select WiFi network',
+          subtitle: 'These credentials will be sent to your ESP32 device over BLE.',
         ),
-      ),
-    ],
+        const SizedBox(height: 20),
+
+        // ── WiFi picker ──────────────────────────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: _networks.isEmpty
+                  ? _OutlineField(
+                      controller: _ssidCtrl,
+                      label: 'WiFi Network (SSID)',
+                      hint: 'My Home WiFi',
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        color: _surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: _border),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          dropdownColor: _surface,
+                          hint: Text('Select a network', style: _ts(13, color: _textLow)),
+                          value: _selectedSsid,
+                          items: _networks.map((n) {
+                            final bars = n.level >= -60 ? 3 : n.level >= -80 ? 2 : 1;
+                            final icon = bars == 3
+                                ? Icons.signal_wifi_4_bar
+                                : bars == 2
+                                    ? Icons.network_wifi_2_bar
+                                    : Icons.signal_wifi_0_bar;
+                            return DropdownMenuItem(
+                              value: n.ssid,
+                              child: Row(
+                                children: [
+                                  Icon(icon, size: 16, color: _textLow),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Text(n.ssid, style: _ts(14), overflow: TextOverflow.ellipsis)),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (v) => setState(() {
+                            _selectedSsid = v;
+                            _ssidCtrl.text = v ?? '';
+                          }),
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 10),
+            // Scan button
+            SizedBox(
+              height: 54,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _textMid,
+                  side: const BorderSide(color: _border),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                onPressed: _scanningWifi ? null : _scanWifi,
+                child: _scanningWifi
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+                      )
+                    : const Icon(Icons.wifi_find, size: 20),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _networks.isEmpty
+              ? 'Tap the scan button to find nearby networks.'
+              : '${_networks.length} networks found. Tap scan to refresh.',
+          style: _ts(12, color: _textLow),
+        ),
+
+        const SizedBox(height: 16),
+        _PasswordField(
+          controller: _passCtrl,
+          obscure: _obscurePass,
+          onToggle: () => setState(() => _obscurePass = !_obscurePass),
+        ),
+        const SizedBox(height: 32),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: _accent,
+              foregroundColor: _bg,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: _formBusy ? null : _provision,
+            child: Text('Provision Device', style: _ts(15, color: _bg, fw: FontWeight.w600)),
+          ),
+        ),
+      ],
+    ),
   );
 
   Widget _buildError(String msg) => Center(
@@ -656,9 +825,9 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _accent.withOpacity(0.07),
+                  color: _accent.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _accent.withOpacity(0.25)),
+                  border: Border.all(color: _accent.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   children: [
@@ -768,9 +937,9 @@ AppBar _appBar(String title) => AppBar(
 Widget _errorBox(String msg) => Container(
   padding: const EdgeInsets.all(12),
   decoration: BoxDecoration(
-    color: _red.withOpacity(0.08),
+    color: _red.withValues(alpha: 0.08),
     borderRadius: BorderRadius.circular(10),
-    border: Border.all(color: _red.withOpacity(0.4)),
+    border: Border.all(color: _red.withValues(alpha: 0.4)),
   ),
   child: Text(msg, style: _ts(13, color: _red)),
 );
@@ -789,9 +958,9 @@ class _SectionHeader extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: _accent.withOpacity(0.1),
+          color: _accent.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _accent.withOpacity(0.3)),
+          border: Border.all(color: _accent.withValues(alpha: 0.3)),
         ),
         child: Icon(icon, color: _accent, size: 18),
       ),
