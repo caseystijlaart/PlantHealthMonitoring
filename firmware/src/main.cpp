@@ -572,7 +572,6 @@ void RunMonitoringCycle()
     snprintf(json, sizeof(json),
         "{\"request_id\":%lld,"
         "\"plant_label\":\"%s\","
-        "\"device_id\":\"%s\","
         "\"soil_moisture_pct\":%.2f,\"temperature_c\":%.2f,"
         "\"humidity_pct\":%.2f,\"light_level_pct\":%.2f,"
         "\"action_water\":%s,\"action_reduce_temp\":%s,"
@@ -581,7 +580,6 @@ void RunMonitoringCycle()
         "\"risk_class\":%d}",
         static_cast<long long>(nowUnix),
         gPlantLabel.c_str(),
-        gDeviceId.c_str(),
         snap.soilMoisturePct, snap.temperatureC,
         snap.humidityPct, snap.lightLevelPct,
         rec.water         ? "true" : "false",
