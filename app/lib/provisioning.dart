@@ -32,6 +32,17 @@ const String kDeviceIdCharUuid     = 'beb5483e-36e1-4688-b7f5-ea07361b26aa';
 const Duration _kPollInterval       = Duration(seconds: 2);
 const int      _kRegistrationTimeout = 90; // seconds
 
+// ── Prototype mode ───────────────────────────────────────────────────────────
+// When true, a new device may be set up with a plant name that no longer exists
+// in plant_settings but still has rows in plant_readings (i.e. a name retired by
+// a previous device).  The new device then "adopts" that old history, which is
+// handy for prototyping/demos.
+//
+// When false (production), retired names with surviving readings are blocked so
+// a new plant can never inherit another plant's history.  A name that is still
+// active in plant_settings is always rejected regardless of this flag.
+const bool kPrototypeMode = true;
+
 SupabaseClient get _db => Supabase.instance.client;
 
 // App colors — keep in sync with AppColors in main.dart
@@ -778,31 +789,43 @@ class _PlantSetupScreenState extends State<PlantSetupScreen> {
     });
 
     try {
-      // Plant names are immutable and must be globally unique — across both
-      // currently-configured plants AND any plant that still has historical
-      // readings.  Readings are kept after a device is removed and carry no
-      // identity other than plant_label, so reusing a retired name would let a
-      // new plant silently inherit the old plant's history.  Block that here.
-      // The check is case-insensitive; the unique index on
-      // plant_settings.plant_label is the authoritative race guard for the
-      // active-plant case.
+      // A name that is still active in plant_settings is always rejected — two
+      // live plants may not share a name (the case-insensitive check gives a
+      // friendly message; the unique index on plant_settings.plant_label is the
+      // authoritative race guard).
       final existingSettings = await _db
           .from('plant_settings')
           .select('plant_label')
           .ilike('plant_label', name)
           .limit(1);
-      final existingReadings = await _db
-          .from('plant_readings')
-          .select('plant_label')
-          .ilike('plant_label', name)
-          .limit(1);
-      if (existingSettings.isNotEmpty || existingReadings.isNotEmpty) {
+      if (existingSettings.isNotEmpty) {
         if (!mounted) return;
         setState(() {
           _saving = false;
-          _error = 'A plant named "$name" already exists or has past readings. Please choose a different name.';
+          _error = 'A plant named "$name" already exists. Please choose a different name.';
         });
         return;
+      }
+
+      // Outside prototype mode, also reject a retired name that still has rows
+      // in plant_readings: readings outlive plant_settings and carry no identity
+      // other than plant_label, so reusing such a name would let this plant
+      // inherit the old plant's history.  In prototype mode this is allowed on
+      // purpose — the new device adopts that history.
+      if (!kPrototypeMode) {
+        final existingReadings = await _db
+            .from('plant_readings')
+            .select('plant_label')
+            .ilike('plant_label', name)
+            .limit(1);
+        if (existingReadings.isNotEmpty) {
+          if (!mounted) return;
+          setState(() {
+            _saving = false;
+            _error = 'A plant named "$name" has past readings. Please choose a different name.';
+          });
+          return;
+        }
       }
 
       await _db.from('plant_settings').insert({
