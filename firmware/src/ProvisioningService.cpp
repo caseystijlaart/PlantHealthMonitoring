@@ -10,6 +10,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLECharacteristic.h>
+#include <BLEAdvertising.h>
 #include <esp_random.h>
 
 #include "NvsStorage.hpp"
@@ -23,6 +24,7 @@ bool   ProvisioningService::ssidSet_         = false;
 bool   ProvisioningService::passwordSet_     = false;
 bool   ProvisioningService::apiKeySet_       = false;
 bool   ProvisioningService::supabaseUrlSet_  = false;
+volatile bool ProvisioningService::reAdvertise_ = false;
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define SSID_UUID           "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -57,6 +59,20 @@ class SupabaseUrlCallback : public BLECharacteristicCallbacks {
     }
 };
 
+// Restarts advertising when a client disconnects before provisioning finishes.
+// The ESP32 stops advertising while connected and does NOT auto-resume, so
+// without this the device becomes undiscoverable after a cancelled setup.
+// Re-advertising is deferred to maintainAdvertising() (called from the wait
+// loop) rather than done here, to let the BLE stack settle after the disconnect.
+class ProvServerCallbacks : public BLEServerCallbacks {
+    void onConnect(BLEServer *) override {
+        ProvisioningService::_onClientConnected();
+    }
+    void onDisconnect(BLEServer *) override {
+        ProvisioningService::_onClientDisconnected();
+    }
+};
+
 /// @endcond
 
 String ProvisioningService::getOrCreateDeviceId()
@@ -87,8 +103,11 @@ void ProvisioningService::begin(const char *deviceName, const String &deviceId)
     deviceId_       = deviceId;
     ssidSet_        = passwordSet_ = apiKeySet_ = supabaseUrlSet_ = false;
 
+    reAdvertise_ = false;
+
     BLEDevice::init(deviceName);
     BLEServer  *pServer  = BLEDevice::createServer();
+    pServer->setCallbacks(new ProvServerCallbacks());
     BLEService *pService = pServer->createService(SERVICE_UUID);
 
     auto *ssidChar = pService->createCharacteristic(SSID_UUID, BLECharacteristic::PROPERTY_WRITE);
@@ -122,6 +141,28 @@ void ProvisioningService::stop()
     BLEDevice::stopAdvertising();
     BLEDevice::deinit(true);
     Log.println(F("[BLE] Provisioning stopped"));
+}
+
+void ProvisioningService::maintainAdvertising()
+{
+    if (!reAdvertise_) return;
+    reAdvertise_ = false;
+    delay(500);                       // let the BLE stack settle after disconnect
+    BLEDevice::startAdvertising();
+    Log.println(F("[BLE] Client disconnected before provisioning — re-advertising"));
+}
+
+void ProvisioningService::_onClientConnected()
+{
+    Log.println(F("[BLE] Client connected"));
+}
+
+void ProvisioningService::_onClientDisconnected()
+{
+    // Only re-advertise if provisioning didn't complete; a disconnect right
+    // after the final write is the normal end-of-provisioning teardown.
+    if (!isProvisioned())
+        reAdvertise_ = true;
 }
 
 bool ProvisioningService::isProvisioned()

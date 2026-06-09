@@ -34,6 +34,16 @@ public:
     static void begin(const char *deviceName, const String &deviceId);
     static void stop();
 
+    /**
+     * @brief Resumes BLE advertising if a client disconnected before finishing.
+     *
+     * The ESP32 stops advertising while a central is connected and does not
+     * auto-resume on disconnect, so if the app cancels mid-provisioning the
+     * device would become undiscoverable.  Call this periodically from the
+     * provisioning wait loop to re-advertise after such a disconnect.
+     */
+    static void maintainAdvertising();
+
     /** @return true once SSID, password, API key, and Supabase URL have all been written. */
     static bool isProvisioned();
 
@@ -48,6 +58,8 @@ public:
     static void _onPasswordWritten    (const String &v);
     static void _onApiKeyWritten      (const String &v);
     static void _onSupabaseUrlWritten (const String &v);
+    static void _onClientConnected    ();
+    static void _onClientDisconnected ();
     /// @endcond
 
 private:
@@ -60,4 +72,5 @@ private:
     static bool   passwordSet_;
     static bool   apiKeySet_;
     static bool   supabaseUrlSet_;
+    static volatile bool reAdvertise_;  ///< set by the BLE disconnect callback
 };

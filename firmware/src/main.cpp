@@ -130,6 +130,7 @@ static void RunProvisioningMode()
     {
         delay(100);
         yield();
+        ProvisioningService::maintainAdvertising();  // re-advertise if a setup was cancelled
     }
 
     const String ssid        = ProvisioningService::getSsid();
