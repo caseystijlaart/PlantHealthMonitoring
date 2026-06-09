@@ -12,6 +12,7 @@
 #include "Certs.hpp"
 #include "NvsStorage.hpp"
 #include "ProvisioningService.hpp"
+#include "CloudLogger.hpp"
 
 #ifndef API_KEY
 #error "API_KEY must be defined in secrets.ini"
@@ -72,7 +73,7 @@ void ClearLocalHistory()
     if (LittleFS.exists(kHistoryFile))
     {
         LittleFS.remove(kHistoryFile);
-        Serial.println(F("[FS] Sensor history cleared"));
+        Log.println(F("[FS] Sensor history cleared"));
     }
 }
 
@@ -93,7 +94,7 @@ void SetPairedWithApp(bool paired, const String &ssid = "", const String &passwo
     File f = LittleFS.open(kPairingFile, "w");
     if (!f)
     {
-        Serial.println(F("[FS] Failed to write pairing document"));
+        Log.println(F("[FS] Failed to write pairing document"));
         return;
     }
     if (paired)
@@ -107,7 +108,7 @@ void SetPairedWithApp(bool paired, const String &ssid = "", const String &passwo
         f.print("unpaired\n");   // no credentials — unpaired devices store no secrets
     }
     f.close();
-    Serial.printf("[FS] Pairing document → %s%s\n",
+    Log.printf("[FS] Pairing document → %s%s\n",
                   paired ? "paired" : "unpaired",
                   paired ? " (+ WiFi credentials)" : " (credentials cleared)");
 }
@@ -122,7 +123,7 @@ bool ReadPairingDoc(String &ssidOut, String &passwordOut)
     if (!LittleFS.exists(kPairingFile))
     {
         // First boot — create the document in the default unpaired state.
-        Serial.println(F("[FS] pairing_state.txt not found — creating as 'unpaired'"));
+        Log.println(F("[FS] pairing_state.txt not found — creating as 'unpaired'"));
         SetPairedWithApp(false);
         return false;
     }
@@ -200,12 +201,12 @@ void ConnectWifi()
         return;
     if (gWifiSsid.isEmpty())
     {
-        Serial.println(F("No WiFi credentials — skipping connect"));
+        Log.println(F("No WiFi credentials — skipping connect"));
         return;
     }
 
-    Serial.print(F("Connecting to WiFi: "));
-    Serial.println(gWifiSsid);
+    Log.print(F("Connecting to WiFi: "));
+    Log.println(gWifiSsid);
     WiFi.mode(WIFI_STA);
     WiFi.begin(gWifiSsid.c_str(), gWifiPassword.c_str());
 
@@ -213,18 +214,18 @@ void ConnectWifi()
     while (WiFi.status() != WL_CONNECTED && millis() - start < 30000UL)
     {
         delay(500);
-        Serial.print('.');
+        Log.print('.');
     }
-    Serial.println();
+    Log.println();
 
     if (WiFi.status() == WL_CONNECTED)
     {
-        Serial.print(F("WiFi connected. IP: "));
-        Serial.println(WiFi.localIP());
+        Log.print(F("WiFi connected. IP: "));
+        Log.println(WiFi.localIP());
     }
     else
     {
-        Serial.println(F("WiFi timed out"));
+        Log.println(F("WiFi timed out"));
     }
 }
 
@@ -247,7 +248,7 @@ bool HttpsPost(const String &url, const String &json)
     https.addHeader(F("Prefer"),        F("return=minimal"));
 
     const int code = https.POST(json);
-    Serial.printf("[HTTP] POST %s → %d\n", url.c_str(), code);
+    Log.printf("[HTTP] POST %s → %d\n", url.c_str(), code);
     https.end();
     return code >= 200 && code < 300;
 }
@@ -294,7 +295,7 @@ bool HttpsPatch(const String &url, const String &json)
     https.addHeader(F("Prefer"),        F("return=minimal"));
 
     const int code = https.sendRequest("PATCH", json);
-    Serial.printf("[HTTP] PATCH %s → %d\n", url.c_str(), code);
+    Log.printf("[HTTP] PATCH %s → %d\n", url.c_str(), code);
     https.end();
     return code >= 200 && code < 300;
 }
@@ -341,7 +342,7 @@ void RegisterDevice()
     https.addHeader(F("Prefer"),        F("resolution=merge-duplicates,return=minimal"));
 
     const int code = https.POST(json);
-    Serial.printf("[Cloud] Device registration → %d\n", code);
+    Log.printf("[Cloud] Device registration → %d\n", code);
     https.end();
 }
 
@@ -368,7 +369,7 @@ void DeleteDeviceFromDb()
     https.addHeader(F("Authorization"), "Bearer " API_KEY);
 
     const int code = https.sendRequest("DELETE");
-    Serial.printf("[Cloud] Device self-delete → %d\n", code);
+    Log.printf("[Cloud] Device self-delete → %d\n", code);
     https.end();
 }
 
@@ -397,7 +398,7 @@ void UpdateLastSeen()
     json += "\"}";
 
     HttpsPatch(url, json);
-    Serial.printf("[Cloud] last_seen → %s\n", timeBuf);
+    Log.printf("[Cloud] last_seen → %s\n", timeBuf);
 }
 
 // ── Plant label lookup (provisioned devices only) ─────────────────────────────
@@ -411,7 +412,7 @@ bool FetchPlantLabelByDeviceId()
     const String body = HttpsGet(url);
     if (body.isEmpty() || body == "[]")
     {
-        Serial.println(F("[Cloud] No plant_settings row for this device yet"));
+        Log.println(F("[Cloud] No plant_settings row for this device yet"));
         return false;
     }
 
@@ -426,7 +427,7 @@ bool FetchPlantLabelByDeviceId()
         return false;
 
     gPlantLabel = body.substring(start, end);
-    Serial.printf("[Cloud] Plant label: %s\n", gPlantLabel.c_str());
+    Log.printf("[Cloud] Plant label: %s\n", gPlantLabel.c_str());
     return true;
 }
 
@@ -464,7 +465,7 @@ bool FetchProfileSettings()
 
     if (payload.indexOf("\"plant_label\":\"" + gPlantLabel + "\"") < 0)
     {
-        Serial.println(F("[Cloud] No settings row for this plant label"));
+        Log.println(F("[Cloud] No settings row for this plant label"));
         return false;
     }
 
@@ -475,13 +476,13 @@ bool FetchProfileSettings()
 
     if (latestVersion == currentVersion)
     {
-        Serial.println(F("[Cloud] Profile up to date"));
+        Log.println(F("[Cloud] Profile up to date"));
         return true;
     }
 
     ApplyProfilePayload(payload);
     currentVersion = static_cast<uint8_t>(latestVersion);
-    Serial.println(F("[Cloud] Profile updated"));
+    Log.println(F("[Cloud] Profile updated"));
     return true;
 }
 
@@ -491,7 +492,7 @@ void SendToCloud(const char *json)
 {
     const String url = String(kSupabaseBase) + kReadingsEndpoint;
     if (!HttpsPost(url, json))
-        Serial.println(F("[Cloud] Upload failed"));
+        Log.println(F("[Cloud] Upload failed"));
 }
 
 // ── Factory-reset command poll ────────────────────────────────────────────────
@@ -512,7 +513,7 @@ void CheckTriggerReset()
     if (body.indexOf("\"trigger_reset\":true") < 0)
         return;
 
-    Serial.println(F("[Cloud] trigger_reset set — device removed by app"));
+    Log.println(F("[Cloud] trigger_reset set — device removed by app"));
 
     // Full reset to factory state: clear local history, mark unpaired,
     // remove the DB row, wipe NVS credentials.
@@ -540,7 +541,7 @@ bool CheckTriggerMeasurement()
     if (body.indexOf("\"trigger_measurement\":true") < 0)
         return false;
 
-    Serial.println(F("[Cloud] trigger_measurement set — running immediate cycle"));
+    Log.println(F("[Cloud] trigger_measurement set — running immediate cycle"));
 
     // Clear the flag
     const String patchUrl = String(kSupabaseBase) + kDevicesEndpoint
@@ -560,7 +561,7 @@ void RunMonitoringCycle()
 
     if (gPlantLabel.isEmpty())
     {
-        Serial.println(F("[Cycle] No plant label — skipping cloud upload"));
+        Log.println(F("[Cycle] No plant label — skipping cloud upload"));
         return;
     }
 
@@ -595,7 +596,7 @@ void RunMonitoringCycle()
 
 void RunProvisioningMode()
 {
-    Serial.println(F("[Prov] Entering BLE provisioning mode"));
+    Log.println(F("[Prov] Entering BLE provisioning mode"));
 
     // Generate (or reload) the device UUID before advertising —
     // the app will read it from the device, not write it.
@@ -613,14 +614,14 @@ void RunProvisioningMode()
     gWifiPassword = ProvisioningService::getPassword();
     // gDeviceId was already set above — no need to read it back
 
-    Serial.println(F("[Prov] Credentials received — stopping BLE"));
+    Log.println(F("[Prov] Credentials received — stopping BLE"));
     ProvisioningService::stop();
 
     // Attempt WiFi
     ConnectWifi();
     if (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println(F("[Prov] WiFi failed — clearing credentials and rebooting"));
+        Log.println(F("[Prov] WiFi failed — clearing credentials and rebooting"));
         NvsStorage::clearAll();
         delay(2000);
         ESP.restart();
@@ -648,7 +649,7 @@ void RunProvisioningMode()
     // about to show the plant setup screen and the user needs time to fill it in.
     gJustProvisioned = true;
 
-    Serial.println(F("[Prov] Provisioning complete"));
+    Log.println(F("[Prov] Provisioning complete"));
 }
 
 } // namespace
@@ -661,6 +662,10 @@ void setup()
     delay(200);
     LittleFS.begin(true);
 
+    // Route serial output to the cloud `logs` table too.  Lines emitted before
+    // WiFi is up (boot, provisioning) are queued and flushed once online.
+    Log.configure(kSupabaseBase, API_KEY, kSupabaseRootCA);
+
     // ── Load identity ─────────────────────────────────────────────────────────
 #ifdef WIFI_SSID
     // Legacy device: credentials baked into firmware at compile time
@@ -670,14 +675,14 @@ void setup()
     gDeviceId     = String(DEVICE_ID);
     gPlantLabel   = PLANT_LABEL;
     gDeviceName   = DEVICE_NAME;          // compile-time name (e.g. "ESP32_COM3")
-    Serial.printf("[Init] Legacy device #%s / plant '%s'\n",
+    Log.printf("[Init] Legacy device #%s / plant '%s'\n",
                   gDeviceId.c_str(), gPlantLabel.c_str());
 #else
     // Provisioned device: identity (device UUID) lives in NVS; the WiFi
     // credentials live in the local pairing document.
     gDeviceId     = NvsStorage::readString("device_id");
     gDeviceName   = DeriveDeviceName();   // unique per board: "PHM-A1B2C3"
-    Serial.printf("[Init] Device name: %s\n", gDeviceName.c_str());
+    Log.printf("[Init] Device name: %s\n", gDeviceName.c_str());
 
     const bool paired = ReadPairingDoc(gWifiSsid, gWifiPassword);
     if (!paired)
@@ -685,7 +690,7 @@ void setup()
         // Not paired with the app yet (or was removed by the app).
         // Enter BLE provisioning and wait — the device stays here until
         // the user adds it through the phone app.
-        Serial.println(F("[Init] Not paired — entering BLE provisioning mode"));
+        Log.println(F("[Init] Not paired — entering BLE provisioning mode"));
         RunProvisioningMode();
     }
     else
@@ -700,7 +705,7 @@ void setup()
             const String nvsPass = NvsStorage::readString("password");
             if (!nvsSsid.isEmpty())
             {
-                Serial.println(F("[Init] Migrating WiFi credentials from NVS into pairing document"));
+                Log.println(F("[Init] Migrating WiFi credentials from NVS into pairing document"));
                 gWifiSsid     = nvsSsid;
                 gWifiPassword = nvsPass;
                 SetPairedWithApp(true, gWifiSsid, gWifiPassword);
@@ -710,7 +715,7 @@ void setup()
         NvsStorage::remove("ssid");
         NvsStorage::remove("password");
 
-        Serial.printf("[Init] Paired — loaded credentials from pairing document (device_id: %s)\n",
+        Log.printf("[Init] Paired — loaded credentials from pairing document (device_id: %s)\n",
                       gDeviceId.c_str());
     }
 #endif
@@ -724,7 +729,7 @@ void setup()
         ArduinoOTA.setHostname(gDeviceName.c_str());
         ArduinoOTA.setPassword(OTA_PASSWORD);
         ArduinoOTA.begin();
-        Serial.println(F("[OTA] Ready"));
+        Log.println(F("[OTA] Ready"));
 #endif
         timeService.SyncTimeWithNtp(10000);
         const std::int64_t nowUnix = timeService.GetCurrentUnixTimeUtc();
@@ -759,7 +764,7 @@ void setup()
         // The loop grace period handles that case instead.
         if (gPlantLabel.isEmpty() && !gJustProvisioned)
         {
-            Serial.println(F("[Init] Paired but no plant_settings found — resetting to BLE mode"));
+            Log.println(F("[Init] Paired but no plant_settings found — resetting to BLE mode"));
             ClearLocalHistory();
             SetPairedWithApp(false);
             DeleteDeviceFromDb();
@@ -785,16 +790,16 @@ void setup()
     if (!snapshots.empty())
     {
         monitoringSystem.LoadHistoricalSnapshots(snapshots);
-        Serial.printf("[Init] Restored %u snapshots\n", static_cast<unsigned>(snapshots.size()));
+        Log.printf("[Init] Restored %u snapshots\n", static_cast<unsigned>(snapshots.size()));
     }
 
     if (!monitoringSystem.Init())
     {
-        Serial.println(F("[Init] Monitoring system failed to initialise"));
+        Log.println(F("[Init] Monitoring system failed to initialise"));
         while (true) {}
     }
 
-    Serial.println(F("[Init] Monitoring system ready"));
+    Log.println(F("[Init] Monitoring system ready"));
 
     if (!gPlantLabel.isEmpty())
     {
@@ -806,11 +811,14 @@ void setup()
         // Just provisioned — waiting for user to complete plant setup in the app.
         // The loop will poll every 30 s and run the first cycle as soon as the
         // plant_settings row appears.
-        Serial.println(F("[Init] Waiting for plant setup in app (polling every 30 s)"));
+        Log.println(F("[Init] Waiting for plant setup in app (polling every 30 s)"));
     }
 
     lastRun          = millis();
     lastCommandCheck = millis();
+
+    // Flush everything logged during boot to the cloud now that we're online.
+    Log.uploadPending(gDeviceId, gDeviceName);
 }
 
 void loop()
@@ -836,7 +844,7 @@ void loop()
             {
                 // Plant label just appeared (user finished setup in app).
                 // Apply profile and run the first cycle immediately.
-                Serial.println(F("[Loop] Plant label acquired — running first cycle"));
+                Log.println(F("[Loop] Plant label acquired — running first cycle"));
                 FetchProfileSettings();
                 pof02::PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
                 strncpy(profile.plantName, gPlantLabel.c_str(), sizeof(profile.plantName) - 1);
@@ -853,11 +861,11 @@ void loop()
                 // This covers both fresh provisioning (user filling in the app)
                 // and a running device that lost its plant_settings row.
                 gNoPlantCount++;
-                Serial.printf("[Loop] No plant label (%u/%u)\n", gNoPlantCount, kMaxNoPlantTicks);
+                Log.printf("[Loop] No plant label (%u/%u)\n", gNoPlantCount, kMaxNoPlantTicks);
 
                 if (gNoPlantCount >= kMaxNoPlantTicks)
                 {
-                    Serial.println(F("[Loop] Grace period expired — resetting to BLE mode"));
+                    Log.println(F("[Loop] Grace period expired — resetting to BLE mode"));
                     ClearLocalHistory();
                     SetPairedWithApp(false);
                     DeleteDeviceFromDb();
@@ -884,6 +892,9 @@ void loop()
             UpdateLastSeen();
             lastRun = now; // reset the regular timer so we don't double-fire
         }
+
+        // Ship any log lines accumulated since the last poll.
+        Log.uploadPending(gDeviceId, gDeviceName);
     }
 
     // ── Regular 3-hour cycle ──────────────────────────────────────────────────
