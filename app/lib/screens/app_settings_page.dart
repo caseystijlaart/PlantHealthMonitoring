@@ -105,11 +105,16 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
     if (deviceId == null) return;
 
     try {
+      // Signal the ESP32 to factory-reset, then remove the plant so it
+      // disappears from the UI. Do NOT delete the devices row here: the firmware
+      // polls trigger_reset (every ~5s) and must still find the row to see the
+      // flag. The device deletes its own row during the reset (CloudService::
+      // DeleteDevice) before rebooting into BLE provisioning mode. Deleting it
+      // here would race the device and leave it running, never re-advertising.
       await supabase
           .from('devices')
           .update({'trigger_reset': true}).eq('device_id', deviceId);
       await supabase.from('plant_settings').delete().eq('device_id', deviceId);
-      await supabase.from('devices').delete().eq('device_id', deviceId);
       await _loadDevices();
       await _loadPlants();
     } catch (e) {
