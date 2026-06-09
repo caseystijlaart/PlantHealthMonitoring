@@ -1458,7 +1458,10 @@ class _DashboardState extends State<Dashboard> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const AppSettingsPage()),
     );
-    if (mounted) setState(() {});
+    // A device (and its plant) may have been removed in settings.  Reload the
+    // plant list so the dashboard — and the Preferences/Graph pages it hands
+    // this list to — no longer offer a plant that no longer exists.
+    if (mounted) await loadPlants();
   }
 
   Future<void> openProfileSettings() async {
@@ -2242,7 +2245,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   void initState() {
     super.initState();
-    if (plants.isEmpty) loadPlants();
+    // Always reload from the database so a plant removed elsewhere isn't still
+    // offered here (the passed-in list can be a stale snapshot).
+    loadPlants();
     loadPlantSettings();
   }
 
