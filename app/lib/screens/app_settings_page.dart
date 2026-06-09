@@ -9,6 +9,7 @@ import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
 import '../widgets/grid_painter.dart';
 import 'device_scan_screen.dart';
+import 'dev_dash.dart';
 
 class AppSettingsPage extends StatefulWidget {
   const AppSettingsPage({super.key});
@@ -19,12 +20,15 @@ class AppSettingsPage extends StatefulWidget {
 
 class _AppSettingsPageState extends State<AppSettingsPage> {
   bool _notifications = AppSettings.notificationsEnabled;
-  bool _dailyReport   = AppSettings.dailyReportEnabled;
-  int  _reportHour    = AppSettings.dailyReportHour;
-  int  _reportMinute  = const [0, 15, 30, 45].reduce((a, b) =>
-      (AppSettings.dailyReportMinute - a).abs() <= (AppSettings.dailyReportMinute - b).abs()
-          ? a
-          : b);
+  bool _dailyReport = AppSettings.dailyReportEnabled;
+  int _reportHour = AppSettings.dailyReportHour;
+  int _reportMinute = const [0, 15, 30, 45].reduce(
+    (a, b) =>
+        (AppSettings.dailyReportMinute - a).abs() <=
+            (AppSettings.dailyReportMinute - b).abs()
+        ? a
+        : b,
+  );
 
   List<String> _plants = [];
   List<Map<String, dynamic>> _devices = [];
@@ -40,7 +44,11 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
   Future<void> _loadPlants() async {
     final res = await supabase.from('plant_settings').select('plant_label');
     if (!mounted) return;
-    setState(() => _plants = (res as List).map((e) => e['plant_label'] as String).toList());
+    setState(
+      () => _plants = (res as List)
+          .map((e) => e['plant_label'] as String)
+          .toList(),
+    );
   }
 
   Future<void> _loadDevices() async {
@@ -78,11 +86,16 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.border)),
-        title: Text('Remove device?',
-            style: GoogleFonts.outfit(
-                color: AppColors.textHigh, fontWeight: FontWeight.w600)),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: Text(
+          'Remove device?',
+          style: GoogleFonts.outfit(
+            color: AppColors.textHigh,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         content: Text(
           'This will remove "$plantLabel" and reset the ESP32 back to provisioning mode. The device will need to be paired again.',
           style: GoogleFonts.outfit(color: AppColors.textMid, fontSize: 14),
@@ -90,13 +103,20 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textLow)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(color: AppColors.textLow),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Remove',
-                style: GoogleFonts.outfit(
-                    color: const Color(0xFFF87171), fontWeight: FontWeight.w600)),
+            child: Text(
+              'Remove',
+              style: GoogleFonts.outfit(
+                color: const Color(0xFFF87171),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -105,36 +125,41 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
     if (deviceId == null) return;
 
     try {
-      // Signal the ESP32 to factory-reset, then remove the plant so it
-      // disappears from the UI. Do NOT delete the devices row here: the firmware
-      // polls trigger_reset (every ~5s) and must still find the row to see the
-      // flag. The device deletes its own row during the reset (CloudService::
-      // DeleteDevice) before rebooting into BLE provisioning mode. Deleting it
-      // here would race the device and leave it running, never re-advertising.
       await supabase
           .from('devices')
-          .update({'trigger_reset': true}).eq('device_id', deviceId);
+          .update({'trigger_reset': true})
+          .eq('device_id', deviceId);
       await supabase.from('plant_settings').delete().eq('device_id', deviceId);
       await _loadDevices();
       await _loadPlants();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Failed to remove device: $e',
-            style: GoogleFonts.outfit(color: AppColors.textHigh)),
-        backgroundColor: const Color(0xFFF87171),
-        behavior: SnackBarBehavior.floating,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to remove device: $e',
+            style: GoogleFonts.outfit(color: AppColors.textHigh),
+          ),
+          backgroundColor: const Color(0xFFF87171),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
   Future<void> _applyDailyReport(bool enabled) async {
     setState(() => _dailyReport = enabled);
     await AppSettings.setDailyReport(
-        enabled: enabled, hour: _reportHour, minute: _reportMinute);
+      enabled: enabled,
+      hour: _reportHour,
+      minute: _reportMinute,
+    );
     if (enabled) {
       await NotificationService.scheduleDailyReport(
-          plants: _plants, hour: _reportHour, minute: _reportMinute);
+        plants: _plants,
+        hour: _reportHour,
+        minute: _reportMinute,
+      );
     } else {
       await NotificationService.cancelDailyReport();
     }
@@ -146,38 +171,46 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
       if (minute != null) _reportMinute = minute;
     });
     await AppSettings.setDailyReport(
-        enabled: _dailyReport, hour: _reportHour, minute: _reportMinute);
+      enabled: _dailyReport,
+      hour: _reportHour,
+      minute: _reportMinute,
+    );
     if (_dailyReport) {
       await NotificationService.scheduleDailyReport(
-          plants: _plants, hour: _reportHour, minute: _reportMinute);
+        plants: _plants,
+        hour: _reportHour,
+        minute: _reportMinute,
+      );
     }
   }
 
   Widget _settingsTile({required Widget child}) => Material(
-        color: AppColors.surface,
+    color: AppColors.surface,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: child,
-        ),
-      );
+        border: Border.all(color: AppColors.border),
+      ),
+      child: child,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-            tooltip: "Back",
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(CupertinoIcons.back)),
+          tooltip: "Back",
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(CupertinoIcons.back),
+        ),
         title: const Text("App Settings"),
         bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(1),
-            child: Container(height: 1, color: AppColors.border)),
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: AppColors.border),
+        ),
       ),
       body: Stack(
         children: [
@@ -189,35 +222,49 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    Text("DEVICES",
-                        style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textLow,
-                            letterSpacing: 1.8)),
+                    Text(
+                      "DEVICES",
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textLow,
+                        letterSpacing: 1.8,
+                      ),
+                    ),
                     const SizedBox(height: 12),
+
                     if (defaultTargetPlatform == TargetPlatform.android) ...[
                       _settingsTile(
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
                           onTap: () async {
                             await Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const DeviceScanScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const DeviceScanScreen(),
+                              ),
                             );
                             _loadDevices();
                           },
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            child: Row(children: [
-                              const Icon(Icons.add_circle_outline,
-                                  size: 18, color: AppColors.accent),
-                              const SizedBox(width: 12),
-                              Text('Add Device',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.add_circle_outline,
+                                  size: 18,
+                                  color: AppColors.accent,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Add Device',
                                   style: GoogleFonts.outfit(
-                                      color: AppColors.accent,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500)),
-                            ]),
+                                    color: AppColors.accent,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -225,110 +272,158 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                       _settingsTile(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          child: Row(children: [
-                            const Icon(Icons.bluetooth_disabled,
-                                size: 18, color: AppColors.textLow),
-                            const SizedBox(width: 12),
-                            Expanded(
-                                child: Text('Add Device (Android only)',
-                                    style: GoogleFonts.outfit(
-                                        color: AppColors.textLow, fontSize: 14))),
-                          ]),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.bluetooth_disabled,
+                                size: 18,
+                                color: AppColors.textLow,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Add Device (Android only)',
+                                  style: GoogleFonts.outfit(
+                                    color: AppColors.textLow,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
+
                     const SizedBox(height: 8),
+
                     if (_devicesLoading)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
                         child: Center(
-                            child: CircularProgressIndicator(
-                                color: AppColors.accent, strokeWidth: 2)),
+                          child: CircularProgressIndicator(
+                            color: AppColors.accent,
+                            strokeWidth: 2,
+                          ),
+                        ),
                       )
                     else if (_devices.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text('No connected devices.',
-                            style: GoogleFonts.outfit(
-                                color: AppColors.textLow, fontSize: 13)),
+                        child: Text(
+                          'No connected devices.',
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textLow,
+                            fontSize: 13,
+                          ),
+                        ),
                       )
                     else
                       ...(_devices.map((device) {
                         final online = device['online'] as bool? ?? false;
-                        final label = device['plant_label'] as String? ?? 'Unknown';
+                        final label =
+                            device['plant_label'] as String? ?? 'Unknown';
                         final id = device['device_id'] as String? ?? '';
-                        final shortId = id.length >= 8 ? id.substring(0, 8) : id;
+                        final shortId = id.length >= 8
+                            ? id.substring(0, 8)
+                            : id;
+
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: _settingsTile(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 0),
-                              child: Row(children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: online
-                                        ? AppColors.accent
-                                        : AppColors.textLow,
-                                    shape: BoxShape.circle,
+                                vertical: 10,
+                                horizontal: 0,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: online
+                                          ? AppColors.accent
+                                          : AppColors.textLow,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(label,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          label,
                                           style: GoogleFonts.outfit(
-                                              color: online
-                                                  ? AppColors.textHigh
-                                                  : AppColors.textMid,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w500)),
-                                      Text(
-                                        online
-                                            ? 'Online · $shortId…'
-                                            : 'Offline · $shortId…',
-                                        style: GoogleFonts.outfit(
+                                            color: online
+                                                ? AppColors.textHigh
+                                                : AppColors.textMid,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Text(
+                                          online
+                                              ? 'Online · $shortId…'
+                                              : 'Offline · $shortId…',
+                                          style: GoogleFonts.outfit(
                                             color: online
                                                 ? AppColors.accent
                                                 : AppColors.textLow,
-                                            fontSize: 11),
-                                      ),
-                                    ],
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                IconButton(
-                                  tooltip: 'Remove device',
-                                  onPressed: () => _deleteDevice(device),
-                                  icon: const Icon(Icons.delete_outline,
-                                      size: 18, color: Color(0xFFF87171)),
-                                ),
-                              ]),
+                                  IconButton(
+                                    tooltip: 'Remove device',
+                                    onPressed: () => _deleteDevice(device),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: Color(0xFFF87171),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
                       })),
+
                     const SizedBox(height: 20),
-                    Text("NOTIFICATIONS",
-                        style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textLow,
-                            letterSpacing: 1.8)),
+
+                    Text(
+                      "NOTIFICATIONS",
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textLow,
+                        letterSpacing: 1.8,
+                      ),
+                    ),
                     const SizedBox(height: 12),
+
                     _settingsTile(
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text("Plant alerts",
-                            style: GoogleFonts.outfit(
-                                color: AppColors.textHigh, fontSize: 15)),
+                        title: Text(
+                          "Plant alerts",
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textHigh,
+                            fontSize: 15,
+                          ),
+                        ),
                         subtitle: Text(
-                            "Get notified when your plant needs watering, light adjustment, or temperature changes.",
-                            style: GoogleFonts.outfit(
-                                color: AppColors.textLow, fontSize: 12)),
+                          "Get notified when your plant needs watering, light adjustment, or temperature changes.",
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textLow,
+                            fontSize: 12,
+                          ),
+                        ),
                         value: _notifications,
                         activeThumbColor: AppColors.accent,
                         activeTrackColor: AppColors.accentDim,
@@ -338,76 +433,165 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                         },
                       ),
                     ),
+
                     const SizedBox(height: 12),
+
                     _settingsTile(
-                      child: Column(children: [
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text("Daily plant report",
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              "Daily plant report",
                               style: GoogleFonts.outfit(
-                                  color: AppColors.textHigh, fontSize: 15)),
-                          subtitle: Text(
+                                color: AppColors.textHigh,
+                                fontSize: 15,
+                              ),
+                            ),
+                            subtitle: Text(
                               "Receive a daily notification with the status of each plant.",
                               style: GoogleFonts.outfit(
-                                  color: AppColors.textLow, fontSize: 12)),
-                          value: _dailyReport,
-                          activeThumbColor: AppColors.accent,
-                          activeTrackColor: AppColors.accentDim,
-                          onChanged: _applyDailyReport,
-                        ),
-                        if (_dailyReport) ...[
-                          Container(height: 1, color: AppColors.border),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Row(children: [
-                              Text("Report time",
-                                  style: GoogleFonts.outfit(
-                                      color: AppColors.textMid, fontSize: 14)),
-                              const Spacer(),
-                              DropdownButton<int>(
-                                value: _reportHour,
-                                dropdownColor: AppColors.surface2,
-                                style: GoogleFonts.outfit(
-                                    color: AppColors.accent,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600),
-                                underline: const SizedBox.shrink(),
-                                items: List.generate(
-                                    24,
-                                    (h) => DropdownMenuItem(
-                                        value: h,
-                                        child: Text(h.toString().padLeft(2, '0')))),
-                                onChanged: (h) => _updateTime(hour: h),
+                                color: AppColors.textLow,
+                                fontSize: 12,
                               ),
-                              Text(":",
-                                  style: GoogleFonts.outfit(
+                            ),
+                            value: _dailyReport,
+                            activeThumbColor: AppColors.accent,
+                            activeTrackColor: AppColors.accentDim,
+                            onChanged: _applyDailyReport,
+                          ),
+                          if (_dailyReport) ...[
+                            Container(height: 1, color: AppColors.border),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    "Report time",
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.textMid,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  DropdownButton<int>(
+                                    value: _reportHour,
+                                    dropdownColor: AppColors.surface2,
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.accent,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    underline: const SizedBox.shrink(),
+                                    items: List.generate(
+                                      24,
+                                      (h) => DropdownMenuItem(
+                                        value: h,
+                                        child: Text(
+                                          h.toString().padLeft(2, '0'),
+                                        ),
+                                      ),
+                                    ),
+                                    onChanged: (h) => _updateTime(hour: h),
+                                  ),
+                                  Text(
+                                    ":",
+                                    style: GoogleFonts.outfit(
                                       color: AppColors.textMid,
                                       fontSize: 15,
-                                      fontWeight: FontWeight.w600)),
-                              DropdownButton<int>(
-                                value: _reportMinute,
-                                dropdownColor: AppColors.surface2,
-                                style: GoogleFonts.outfit(
-                                    color: AppColors.accent,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600),
-                                underline: const SizedBox.shrink(),
-                                items: [0, 15, 30, 45]
-                                    .map((m) => DropdownMenuItem(
-                                        value: m,
-                                        child: Text(m.toString().padLeft(2, '0'))))
-                                    .toList(),
-                                onChanged: (m) => _updateTime(minute: m),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  DropdownButton<int>(
+                                    value: _reportMinute,
+                                    dropdownColor: AppColors.surface2,
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.accent,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    underline: const SizedBox.shrink(),
+                                    items: [0, 15, 30, 45]
+                                        .map(
+                                          (m) => DropdownMenuItem(
+                                            value: m,
+                                            child: Text(
+                                              m.toString().padLeft(2, '0'),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (m) => _updateTime(minute: m),
+                                  ),
+                                ],
                               ),
-                            ]),
-                          ),
+                            ),
+                          ],
                         ],
-                      ]),
+                      ),
                     ),
+
                     const SizedBox(height: 20),
+
+                    // 👇 NEW SECTION
+                    Text(
+                      "DEVELOPER PAGE",
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textLow,
+                        letterSpacing: 1.8,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    _settingsTile(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const DevDash()),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.developer_mode,
+                                size: 18,
+                                color: AppColors.accent,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Open Developer Page',
+                                  style: GoogleFonts.outfit(
+                                    color: AppColors.textHigh,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right,
+                                color: AppColors.textLow,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
                     Text(
                       "Plant alerts fire automatically when a new reading with moderate or high risk is detected. The daily report sends one notification per day at your chosen time with the status of every plant.",
-                      style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textLow),
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: AppColors.textLow,
+                      ),
                     ),
                   ],
                 ),
