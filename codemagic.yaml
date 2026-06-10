@@ -6,50 +6,25 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-    working_directory: app
+    working_directory: app/ios_only
     scripts:
       - name: Install dependencies
-        script: |
-          # Swift Package Manager integration breaks --no-codesign builds
-          # (Xcode demands a Development Team for SPM targets). Force the
-          # classic CocoaPods flow instead.
-          flutter config --no-enable-swift-package-manager
-          flutter pub get
-
-      - name: Generate Xcode config
-        script: flutter build ios --release --no-codesign --config-only
+        script: flutter pub get
 
       - name: Install CocoaPods
         script: |
           cd ios && pod install
 
       - name: Build iOS (no codesign)
-        # Invoke xcodebuild directly instead of `flutter build ios`: the
-        # Flutter wrapper aborts unsigned device builds with a generic
-        # "requires a Development Team" message. Passing the signing
-        # overrides on the command line disables signing for every target,
-        # including Runner itself.
-        script: |
-          xcodebuild build \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath build/ios \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="" \
-            COMPILER_INDEX_STORE_ENABLE=NO
+        script: flutter build ios --release --no-codesign
 
       - name: Package IPA
         script: |
-          cd build/ios/Build/Products/Release-iphoneos
+          cd build/ios/iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/Runner.app
           zip -r Runner.ipa Payload
 
     artifacts:
-      - build/ios/Build/Products/Release-iphoneos/Runner.ipa
-      - app/build/ios/Build/Products/Release-iphoneos/Runner.ipa
+      - build/ios/iphoneos/Runner.ipa
       - /tmp/xcodebuild_logs/*.log
