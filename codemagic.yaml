@@ -9,7 +9,12 @@ workflows:
     working_directory: app
     scripts:
       - name: Install dependencies
-        script: flutter pub get
+        script: |
+          # Swift Package Manager integration breaks --no-codesign builds
+          # (Xcode demands a Development Team for SPM targets). Force the
+          # classic CocoaPods flow instead.
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
 
       - name: Install CocoaPods
         script: |
