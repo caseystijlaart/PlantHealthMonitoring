@@ -46,7 +46,13 @@ class _DataPageState extends State<DataPage> {
     ('light_level_pct', 'Light %'),
     ('risk_class', 'Risk'),
     ('recommendation_summary', 'Water in'),
+    // Virtual column: shows the actions:[...] part of recommendation_summary.
+    ('actions', 'Actions'),
   ];
+
+  /// Maps a (possibly virtual) table column to the database column it reads.
+  static String _dbColumn(String col) =>
+      col == 'actions' ? 'recommendation_summary' : col;
 
   List<String> selectedMetrics = ["soil_moisture_pct"];
   String timeRange = "24h";
@@ -113,7 +119,11 @@ class _DataPageState extends State<DataPage> {
     if (widget.selectedPlant == null) return;
     setState(() => _tableLoading = true);
 
-    final cols = ['plant_label', 'timestamp', ..._tableColumns].join(',');
+    final cols = {
+      'plant_label',
+      'timestamp',
+      ..._tableColumns.map(_dbColumn),
+    }.join(',');
     final res = await supabase
         .from('plant_readings')
         .select(cols)
@@ -146,6 +156,14 @@ class _DataPageState extends State<DataPage> {
     if (v == null) return '—';
     if (col == 'risk_class') {
       return switch (v) { 0 => 'Healthy', 1 => 'Moderate', 2 => 'High', _ => '$v' };
+    }
+    if (col == 'actions') {
+      final m = RegExp(r'actions:\[([^\]]*)\]').firstMatch(v as String? ?? '');
+      final items = (m?.group(1) ?? '')
+          .trim()
+          .split(RegExp(r'\s+'))
+          .where((s) => s.isNotEmpty);
+      return items.isEmpty ? '—' : items.join(', ');
     }
     if (col == 'recommendation_summary') {
       final match = RegExp(r'predWaterMin[=:\s]+([\d.]+)').firstMatch(v as String? ?? '');
@@ -330,22 +348,19 @@ class _DataPageState extends State<DataPage> {
           runSpacing: 6,
           children: _allColumns.map((c) {
             final sel = _tableColumns.contains(c.$1);
-            final atMax = _tableColumns.length >= 2 && !sel;
             return FilterChip(
               label: Text(c.$2),
               selected: sel,
-              onSelected: atMax
-                  ? null
-                  : (v) {
-                      setState(() {
-                        if (v) {
-                          _tableColumns.add(c.$1);
-                        } else {
-                          _tableColumns.remove(c.$1);
-                        }
-                      });
-                      _fetchTable();
-                    },
+              onSelected: (v) {
+                setState(() {
+                  if (v) {
+                    _tableColumns.add(c.$1);
+                  } else {
+                    _tableColumns.remove(c.$1);
+                  }
+                });
+                _fetchTable();
+              },
             );
           }).toList(),
         ),
@@ -357,18 +372,18 @@ class _DataPageState extends State<DataPage> {
               child: Text("No data found",
                   style: GoogleFonts.outfit(color: AppColors.textLow, fontSize: 13)))
         else
+          // Columns auto-size to their content, but the table is never
+          // narrower than the screen: a minWidth makes it stretch edge to
+          // edge, and when wider the horizontal scroll view takes over.
           LayoutBuilder(builder: (context, constraints) {
-            final totalCols = 1 + _tableColumns.length;
-            const minColWidth = 88.0;
-            final minTableWidth = totalCols * minColWidth;
-            final tableWidth = minTableWidth > constraints.maxWidth
-                ? minTableWidth
-                : constraints.maxWidth;
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: tableWidth,
-                child: DataTable(
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 420),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: SingleChildScrollView(
+                    child: DataTable(
                   headingRowColor:
                       WidgetStateProperty.all(AppColors.surface),
                   dataRowColor:
@@ -398,7 +413,7 @@ class _DataPageState extends State<DataPage> {
                           style: GoogleFonts.outfit(
                               color: AppColors.textLow, fontSize: 12))),
                       ..._tableColumns.map((col) {
-                        final v = row[col];
+                        final v = row[_dbColumn(col)];
                         if (col == 'risk_class') {
                           return DataCell(Text(_fmtValue(v, col),
                               style: GoogleFonts.outfit(
@@ -410,6 +425,8 @@ class _DataPageState extends State<DataPage> {
                       }),
                     ]);
                   }).toList(),
+                    ),
+                  ),
                 ),
               ),
             );

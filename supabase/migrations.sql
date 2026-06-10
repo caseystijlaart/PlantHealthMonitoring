@@ -119,3 +119,20 @@ SELECT setval(
 
 ALTER TABLE plant_settings
   ALTER COLUMN id SET DEFAULT nextval('plant_settings_id_seq');
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Step 7: Add device_name to devices
+--
+-- A human-readable name for the device (the BLE advertised name, e.g.
+-- "PlantMonitor-1A2B").  Written by the app right after the firmware registers
+-- the device during provisioning.  Makes devices recognisable in the app and
+-- dev dashboard without having to compare long UUIDs.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+ALTER TABLE devices
+  ADD COLUMN IF NOT EXISTS device_name text;
+
+-- Optional: name the two legacy devices.
+UPDATE devices SET device_name = 'PeaceLily sensor'   WHERE device_id = '1' AND device_name IS NULL;
+UPDATE devices SET device_name = 'PrayerPlant sensor' WHERE device_id = '2' AND device_name IS NULL;

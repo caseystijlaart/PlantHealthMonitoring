@@ -34,6 +34,9 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
   List<Map<String, dynamic>> _devices = [];
   bool _devicesLoading = true;
 
+  /// Device IDs whose tile is expanded to reveal the full UUID.
+  final Set<String> _expandedDevices = {};
+
   @override
   void initState() {
     super.initState();
@@ -53,22 +56,40 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
 
   Future<void> _loadDevices() async {
     setState(() => _devicesLoading = true);
+    // Two separate queries merged client-side: an embedded select
+    // (devices(...)) needs a foreign key in PostgREST's schema cache, which
+    // breaks when the FK migration step was skipped or the cache is stale.
     final settings = await supabase
         .from('plant_settings')
-        .select('plant_label, device_id, devices(last_seen)')
+        .select('plant_label, device_id')
         .not('device_id', 'is', null);
     if (!mounted) return;
 
+    final deviceIds = (settings as List)
+        .map((e) => e['device_id'] as String?)
+        .whereType<String>()
+        .toList();
+    final deviceRows = deviceIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : List<Map<String, dynamic>>.from(
+            await supabase
+                .from('devices')
+                .select('device_id, last_seen, device_name')
+                .inFilter('device_id', deviceIds),
+          );
+    if (!mounted) return;
+    final byId = {for (final d in deviceRows) d['device_id'] as String: d};
+
     final cutoff = DateTime.now().toUtc().subtract(const Duration(hours: 4));
-    final results = (settings as List).cast<Map<String, dynamic>>().map((d) {
-      final deviceRow = d['devices'] as Map<String, dynamic>?;
+    final results = settings.cast<Map<String, dynamic>>().map((d) {
+      final deviceRow = byId[d['device_id']];
       final lastSeenStr = deviceRow?['last_seen'] as String?;
       bool online = false;
       if (lastSeenStr != null) {
         final lastSeen = DateTime.tryParse(lastSeenStr);
         online = lastSeen != null && lastSeen.isAfter(cutoff);
       }
-      return {...d, 'online': online};
+      return {...d, 'online': online, 'devices': deviceRow};
     }).toList();
 
     if (!mounted) return;
@@ -324,14 +345,29 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                         final label =
                             device['plant_label'] as String? ?? 'Unknown';
                         final id = device['device_id'] as String? ?? '';
-                        final shortId = id.length >= 8
-                            ? id.substring(0, 8)
-                            : id;
+                        final deviceName =
+                            (device['devices']
+                                    as Map<String, dynamic>?)?['device_name']
+                                as String?;
+                        final displayName =
+                            (deviceName != null && deviceName.isNotEmpty)
+                            ? deviceName
+                            : (id.length >= 8
+                                  ? '${id.substring(0, 8)}…'
+                                  : id);
+                        final expanded = _expandedDevices.contains(id);
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: _settingsTile(
-                            child: Padding(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => setState(() {
+                                expanded
+                                    ? _expandedDevices.remove(id)
+                                    : _expandedDevices.add(id);
+                              }),
+                              child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 10,
                                 horizontal: 0,
@@ -366,8 +402,8 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                                         ),
                                         Text(
                                           online
-                                              ? 'Online · $shortId…'
-                                              : 'Offline · $shortId…',
+                                              ? 'Online · $displayName'
+                                              : 'Offline · $displayName',
                                           style: GoogleFonts.outfit(
                                             color: online
                                                 ? AppColors.accent
@@ -375,6 +411,35 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                                             fontSize: 11,
                                           ),
                                         ),
+                                        if (expanded)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 6,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'DEVICE ID',
+                                                  style: GoogleFonts.outfit(
+                                                    color: AppColors.textLow,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w600,
+                                                    letterSpacing: 1.2,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  id,
+                                                  style: GoogleFonts.outfit(
+                                                    color: AppColors.textLow,
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
@@ -388,6 +453,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                                     ),
                                   ),
                                 ],
+                              ),
                               ),
                             ),
                           ),

@@ -96,13 +96,42 @@ class _DevDashState extends State<DevDash> {
     }).toList();
   }
 
-  Widget _buildTable() {
-    final cols = ["timestamp", ..._visibleColumns];
+  /// Width needed so the longest visible message fits in at most two lines.
+  double _messageColWidth(TextStyle style) {
+    const minWidth = 160.0;
+    const maxWidth = 480.0;
+    double widest = 0;
+    for (final row in _filteredRows) {
+      final v = row['message']?.toString() ?? "-";
+      final tp = TextPainter(
+        text: TextSpan(text: v, style: style),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      if (tp.width > widest) widest = tp.width;
+    }
+    // Half the single-line width (plus padding slack) lets it wrap onto two lines.
+    return (widest / 2 + 24).clamp(minWidth, maxWidth);
+  }
 
+  Widget _buildTable() {
     return LayoutBuilder(
       builder: (context, constraints) {
         const minColWidth = 160.0;
-        final tableWidth = cols.length * minColWidth;
+        final textStyle =
+            DataTableTheme.of(context).dataTextStyle ??
+            Theme.of(context).textTheme.bodyMedium ??
+            const TextStyle(fontSize: 14);
+        final msgWidth = _visibleColumns.contains("message")
+            ? _messageColWidth(textStyle)
+            : 0.0;
+
+        double colWidth(String col) =>
+            col == "message" ? msgWidth : minColWidth;
+
+        final tableWidth = minColWidth + // timestamp column
+            _visibleColumns.fold<double>(0, (sum, c) => sum + colWidth(c)) +
+            _visibleColumns.length * 20; // column spacing
 
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -112,6 +141,8 @@ class _DevDashState extends State<DevDash> {
                 : tableWidth,
             child: DataTable(
               columnSpacing: 20,
+              dataRowMinHeight: 48,
+              dataRowMaxHeight: 72,
               columns: [
                 const DataColumn(label: Text("TIME")),
                 ..._visibleColumns.map(
@@ -149,11 +180,12 @@ class _DevDashState extends State<DevDash> {
 
                       return DataCell(
                         SizedBox(
-                          width: 180,
+                          width: colWidth(col),
                           child: Text(
                             v,
                             softWrap: true,
-                            overflow: TextOverflow.visible,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       );
