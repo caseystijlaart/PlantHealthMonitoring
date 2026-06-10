@@ -4,16 +4,16 @@ Flutter app for the PlantHealthMonitor system. Displays live sensor readings and
 
 **Platform support:**
 
-| Feature | Android | iOS |
-|---|---|---|
-| Dashboard, charts, data | ✅ | ✅ |
-| Plant preferences | ✅ | ✅ |
-| Push notifications | ✅ | ✅ |
-| Settings, device list | ✅ | ✅ |
-| Add Device (BLE provisioning) | ✅ | ❌ |
-| Delete / reset device | ✅ | ✅ |
+| Feature | Android | Windows | iOS |
+|---|---|---|---|
+| Dashboard, charts, data | ✅ | ✅ | ✅ |
+| Plant preferences | ✅ | ✅ | ✅ |
+| Local notifications | ✅ | ❌ | ✅ |
+| Settings, device list | ✅ | ✅ | ✅ |
+| Add Device (BLE provisioning) | ✅ | ✅ | ❌ |
+| Delete / reset device | ✅ | ✅ | ✅ |
 
-BLE provisioning requires Android. All other features work on both platforms. Devices provisioned from Android are fully accessible from iOS.
+BLE provisioning works on Android and Windows. On Windows, BLE uses `flutter_blue_plus_windows` (WinRT backend, same API) and WiFi network suggestions come from parsing `netsh wlan show networks` instead of the Android-only `wifi_scan` plugin. Notifications are Android/iOS only (the service no-ops on Windows). Devices provisioned from any platform are accessible from all of them.
 
 ---
 
@@ -32,7 +32,7 @@ Install dependencies and run:
 
 ```sh
 flutter pub get
-flutter run -d android
+flutter run -d android   # or: flutter run -d windows
 ```
 
 ---
@@ -116,7 +116,8 @@ No BLE permissions are required since provisioning is not supported on iOS. Stan
 |---|---|
 | `supabase_flutter` | Database client + Realtime |
 | `flutter_blue_plus` | BLE provisioning |
-| `permission_handler` | Runtime BLE permissions |
+| `flutter_blue_plus_windows` | WinRT BLE backend for Windows (same API) |
+| `permission_handler` | Runtime BLE permissions (Android) |
 | `flutter_local_notifications` | Push alerts + daily report |
 | `fl_chart` | Sensor history charts |
 | `google_fonts` | Outfit typeface |

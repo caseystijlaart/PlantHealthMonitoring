@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.2.0+1
 
 environment:
   sdk: ^3.12.0
@@ -41,7 +41,11 @@ dependencies:
   shared_preferences: ^2.3.3
   timezone: ^0.9.4
   flutter_timezone: ^5.0.0
-  flutter_blue_plus: ^1.35.3
+  # Kept at the version flutter_blue_plus_windows compiles against.
+  flutter_blue_plus: ^1.34.5
+  # Same FlutterBluePlus API with a WinRT backend on Windows; re-exports
+  # flutter_blue_plus on other platforms.
+  flutter_blue_plus_windows: ^1.26.0
   permission_handler: ^11.3.1
   wifi_scan: ^0.4.1
 
@@ -64,9 +68,18 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
+  msix: ^3.16.13
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+msix_config:
+  display_name: PlantHealthMonitor
+  publisher_display_name: Casey Stijlaart
+  identity_name: com.casey.planthealthmonitor
+  msix_version: 1.2.0.0
+  logo_path: assets/icon/app_icon.png
+  capabilities: bluetooth, internetClient
 
 # The following section is specific to Flutter packages.
 flutter_launcher_icons:

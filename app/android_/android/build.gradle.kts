@@ -19,6 +19,16 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// flutter_blue_plus 1.34.x ships with compileSdk 33, but current AndroidX
+// dependencies require 34+. Force a newer compileSdk on all plugin modules.
+subprojects {
+    fun forceCompileSdk() {
+        extensions.findByType(com.android.build.gradle.BaseExtension::class.java)
+            ?.compileSdkVersion(36)
+    }
+    if (state.executed) forceCompileSdk() else afterEvaluate { forceCompileSdk() }
+}
+
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)

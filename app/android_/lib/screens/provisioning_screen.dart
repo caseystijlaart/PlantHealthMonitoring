@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+// Re-exports flutter_blue_plus and adds a WinRT backend on Windows.
+import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wifi_scan/wifi_scan.dart';
@@ -19,6 +21,13 @@ const int _kRegistrationTimeout = 90;
 SupabaseClient get _db => Supabase.instance.client;
 
 enum _ProvStep { connecting, form, sending, waiting, error }
+
+/// Platform-neutral WiFi network entry; [level] is signal strength in dBm.
+class _WifiNetwork {
+  final String ssid;
+  final int level;
+  const _WifiNetwork(this.ssid, this.level);
+}
 
 class ProvisioningScreen extends StatefulWidget {
   final BluetoothDevice device;
@@ -37,7 +46,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   bool _obscurePass = true;
   bool _formBusy = false;
 
-  List<WiFiAccessPoint> _networks = [];
+  List<_WifiNetwork> _networks = [];
   bool _scanningWifi = false;
   String? _selectedSsid;
 
@@ -62,10 +71,9 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   Future<void> _scanWifi() async {
     setState(() => _scanningWifi = true);
     try {
-      await Permission.locationWhenInUse.request();
-      final can = await WiFiScan.instance.canStartScan(askPermissions: true);
-      if (can == CanStartScan.yes) await WiFiScan.instance.startScan();
-      final results = await WiFiScan.instance.getScannedResults();
+      final results = Platform.isWindows
+          ? await _scanWifiWindows()
+          : await _scanWifiAndroid();
       final seen = <String>{};
       final unique = results
           .where((n) => n.ssid.isNotEmpty && seen.add(n.ssid))
@@ -77,6 +85,44 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
     } finally {
       if (mounted) setState(() => _scanningWifi = false);
     }
+  }
+
+  Future<List<_WifiNetwork>> _scanWifiAndroid() async {
+    await Permission.locationWhenInUse.request();
+    final can = await WiFiScan.instance.canStartScan(askPermissions: true);
+    if (can == CanStartScan.yes) await WiFiScan.instance.startScan();
+    final results = await WiFiScan.instance.getScannedResults();
+    return results.map((n) => _WifiNetwork(n.ssid, n.level)).toList();
+  }
+
+  /// wifi_scan has no Windows support, so parse `netsh wlan show networks`.
+  Future<List<_WifiNetwork>> _scanWifiWindows() async {
+    final res = await Process.run(
+      'netsh',
+      ['wlan', 'show', 'networks', 'mode=bssid'],
+      stdoutEncoding: const SystemEncoding(),
+    );
+    if (res.exitCode != 0) return [];
+
+    final networks = <_WifiNetwork>[];
+    String? ssid;
+    for (final raw in const LineSplitter().convert(res.stdout as String)) {
+      final line = raw.trim();
+      // Locale-independent enough: "SSID 1 : name" / "Signal : 87%".
+      final ssidMatch = RegExp(r'^SSID\s+\d+\s*:\s*(.*)$').firstMatch(line);
+      if (ssidMatch != null) {
+        ssid = ssidMatch.group(1)!.trim();
+        continue;
+      }
+      final signalMatch = RegExp(r':\s*(\d+)%$').firstMatch(line);
+      if (signalMatch != null && ssid != null && ssid.isNotEmpty) {
+        final percent = int.parse(signalMatch.group(1)!);
+        // Approximate netsh quality % as dBm to match Android's scale.
+        networks.add(_WifiNetwork(ssid, (percent ~/ 2) - 100));
+        ssid = null;
+      }
+    }
+    return networks;
   }
 
   Future<void> _connect() async {

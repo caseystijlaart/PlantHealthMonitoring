@@ -254,7 +254,8 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                     ),
                     const SizedBox(height: 12),
 
-                    if (defaultTargetPlatform == TargetPlatform.android) ...[
+                    if (defaultTargetPlatform == TargetPlatform.android ||
+                        defaultTargetPlatform == TargetPlatform.windows) ...[
                       _settingsTile(
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
@@ -303,7 +304,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'Add Device (Android only)',
+                                  'Add Device (Android/Windows only)',
                                   style: GoogleFonts.outfit(
                                     color: AppColors.textLow,
                                     fontSize: 14,

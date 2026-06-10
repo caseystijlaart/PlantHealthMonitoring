@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+// Re-exports flutter_blue_plus and adds a WinRT backend on Windows.
+import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../core/app_colors.dart';
@@ -24,7 +25,9 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<bool>? _isScanSub;
 
-  static bool get _bleSupported => defaultTargetPlatform == TargetPlatform.android;
+  static bool get _bleSupported =>
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.windows;
 
   @override
   void initState() {
@@ -51,23 +54,32 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
       _error = null;
     });
 
-    final statuses = await [
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.locationWhenInUse,
-    ].request();
+    // Runtime BLE permissions are an Android concept; Windows has none.
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final statuses = await [
+        Permission.bluetoothScan,
+        Permission.bluetoothConnect,
+        Permission.locationWhenInUse,
+      ].request();
 
-    if (statuses.values.any((s) => s == PermissionStatus.permanentlyDenied)) {
-      await openAppSettings();
-      return;
-    }
-    if (statuses.values.any((s) => s == PermissionStatus.denied)) {
-      setState(() => _error = 'Bluetooth permission denied. Please allow it when prompted.');
-      return;
+      if (statuses.values.any((s) => s == PermissionStatus.permanentlyDenied)) {
+        await openAppSettings();
+        return;
+      }
+      if (statuses.values.any((s) => s == PermissionStatus.denied)) {
+        setState(() => _error = 'Bluetooth permission denied. Please allow it when prompted.');
+        return;
+      }
     }
 
-    final adapterState = await FlutterBluePlus.adapterState.first;
-    if (adapterState != BluetoothAdapterState.on) {
+    // The Windows backend emits unknown/off first while the WinRT radio
+    // state is still being queried, so wait for "on" instead of sampling
+    // the first value.
+    try {
+      await FlutterBluePlus.adapterState
+          .firstWhere((s) => s == BluetoothAdapterState.on)
+          .timeout(const Duration(seconds: 5));
+    } on TimeoutException {
       setState(() => _error = 'Bluetooth is off. Please enable it and try again.');
       return;
     }
@@ -125,7 +137,7 @@ class _DeviceScanScreenState extends State<DeviceScanScreen> {
             children: [
               const Icon(Icons.bluetooth_disabled, size: 48, color: AppColors.textLow),
               const SizedBox(height: 16),
-              Text('BLE provisioning is only available on Android.',
+              Text('BLE provisioning is only available on Android and Windows.',
                   textAlign: TextAlign.center, style: provTs(15)),
             ],
           ),
