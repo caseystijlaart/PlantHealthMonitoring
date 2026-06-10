@@ -27,13 +27,105 @@ class _DevDashState extends State<DevDash> {
   List<Map<String, dynamic>> _tableRows = [];
   bool _tableLoading = false;
 
+  List<Map<String, dynamic>> _modelStats = [];
+  bool _modelStatsLoading = false;
+
+  bool _showModelSection = true;
+  bool _showDevicesSection = true;
+  bool _showLogsSection = true;
+
+  List<Map<String, dynamic>> _deviceRows = [];
+  bool _devicesLoading = false;
+
   @override
   void initState() {
     super.initState();
     _loadAll();
   }
 
-  Future<void> _loadAll() => _fetchTable();
+  Future<void> _loadAll() =>
+      Future.wait([_fetchTable(), _fetchModelStats(), _fetchDevices()]);
+
+  Future<void> _fetchDevices() async {
+    setState(() => _devicesLoading = true);
+
+    try {
+      final res = await supabase
+          .from('devices')
+          .select('device_id,device_name,status,model_version,last_seen,'
+              'trigger_reset,trigger_measurement')
+          .order('last_seen', ascending: false);
+
+      if (!mounted) return;
+      setState(() {
+        _deviceRows = List<Map<String, dynamic>>.from(res);
+        _devicesLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _devicesLoading = false);
+    }
+  }
+
+  bool _inTimeRange(DateTime t, DateTime now) {
+    if (timeRange == '24h') return now.difference(t).inHours <= 24;
+    if (timeRange == '7d') return now.difference(t).inDays <= 7;
+    return true;
+  }
+
+  /// Aggregates plant_readings per model_version so model generations can be
+  /// compared (sample count, mean/min confidence, risk distribution).
+  Future<void> _fetchModelStats() async {
+    setState(() => _modelStatsLoading = true);
+
+    try {
+      final res = await supabase
+          .from('plant_readings')
+          .select('timestamp,model_version,confidence,risk_class')
+          .order('timestamp', ascending: false)
+          .limit(2000);
+
+      final now = DateTime.now();
+      final byVersion = <String, List<Map<String, dynamic>>>{};
+      for (final row in List<Map<String, dynamic>>.from(res)) {
+        if (!_inTimeRange(DateTime.parse(row['timestamp']), now)) continue;
+        final v = row['model_version']?.toString() ?? 'pre-versioning';
+        byVersion.putIfAbsent(v, () => []).add(row);
+      }
+
+      final stats = byVersion.entries.map((e) {
+        final rows = e.value;
+        final confs = rows
+            .map((r) => (r['confidence'] as num?)?.toDouble())
+            .whereType<double>()
+            .toList();
+        int risk(int c) =>
+            rows.where((r) => (r['risk_class'] as num?)?.toInt() == c).length;
+        return <String, dynamic>{
+          'version': e.key,
+          'readings': rows.length,
+          'avg_conf': confs.isEmpty
+              ? null
+              : confs.reduce((a, b) => a + b) / confs.length,
+          'low_conf_pct': confs.isEmpty
+              ? null
+              : 100.0 * confs.where((c) => c < 0.6).length / confs.length,
+          'risk_0': risk(0),
+          'risk_1': risk(1),
+          'risk_2': risk(2),
+        };
+      }).toList()
+        ..sort((a, b) =>
+            (b['version'] as String).compareTo(a['version'] as String));
+
+      if (!mounted) return;
+      setState(() {
+        _modelStats = stats;
+        _modelStatsLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _modelStatsLoading = false);
+    }
+  }
 
   Future<void> _fetchTable() async {
     setState(() => _tableLoading = true);
@@ -112,6 +204,97 @@ class _DevDashState extends State<DevDash> {
     }
     // Half the single-line width (plus padding slack) lets it wrap onto two lines.
     return (widest / 2 + 24).clamp(minWidth, maxWidth);
+  }
+
+  Widget _buildModelStats() {
+    if (_modelStatsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_modelStats.isEmpty) {
+      return Text("No readings in range",
+          style: TextStyle(color: AppColors.textMid));
+    }
+
+    String pct(dynamic v) => v == null ? "-" : (v as double).toStringAsFixed(1);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columnSpacing: 20,
+        columns: const [
+          DataColumn(label: Text("MODEL")),
+          DataColumn(label: Text("READINGS"), numeric: true),
+          DataColumn(label: Text("AVG CONF"), numeric: true),
+          DataColumn(label: Text("CONF <0.6 %"), numeric: true),
+          DataColumn(label: Text("RISK 0/1/2")),
+        ],
+        rows: _modelStats.map((s) {
+          final avg = s['avg_conf'] as double?;
+          return DataRow(cells: [
+            DataCell(Text(s['version'].toString())),
+            DataCell(Text(s['readings'].toString())),
+            DataCell(Text(avg == null ? "-" : avg.toStringAsFixed(3))),
+            DataCell(Text(pct(s['low_conf_pct']))),
+            DataCell(Text("${s['risk_0']} / ${s['risk_1']} / ${s['risk_2']}")),
+          ]);
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildDevicesTable() {
+    if (_devicesLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_deviceRows.isEmpty) {
+      return Text("No devices registered",
+          style: TextStyle(color: AppColors.textMid));
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columnSpacing: 20,
+        columns: const [
+          DataColumn(label: Text("NAME")),
+          DataColumn(label: Text("STATUS")),
+          DataColumn(label: Text("MODEL")),
+          DataColumn(label: Text("LAST SEEN")),
+          DataColumn(label: Text("TRIGGERS")),
+          DataColumn(label: Text("DEVICE ID")),
+        ],
+        rows: _deviceRows.map((d) {
+          final status = d['status']?.toString() ?? "-";
+          final color = _statusColor(status);
+          final triggers = [
+            if (d['trigger_reset'] == true) "reset",
+            if (d['trigger_measurement'] == true) "measure",
+          ].join(", ");
+
+          return DataRow(cells: [
+            DataCell(Text(d['device_name']?.toString() ?? "-")),
+            DataCell(
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(status.toUpperCase(),
+                    style: TextStyle(color: color)),
+              ),
+            ),
+            DataCell(Text(d['model_version']?.toString() ?? "-")),
+            DataCell(Text(d['last_seen'] == null
+                ? "-"
+                : _fmtTimestamp(d['last_seen'].toString()))),
+            DataCell(Text(triggers.isEmpty ? "-" : triggers)),
+            DataCell(Text(d['device_id']?.toString() ?? "-")),
+          ]);
+        }).toList(),
+      ),
+    );
   }
 
   Widget _buildTable() {
@@ -203,7 +386,7 @@ class _DevDashState extends State<DevDash> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Charts & Data")),
+      appBar: AppBar(title: const Text("Developer Page")),
 
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -226,34 +409,67 @@ class _DevDashState extends State<DevDash> {
 
           const SizedBox(height: 12),
 
-          // ---------------- COLUMN SELECTOR ----------------
-          Wrap(
-            spacing: 8,
-            children: _allColumns.map((c) {
-              final selected = _visibleColumns.contains(c);
-
-              return FilterChip(
-                label: Text(c.toUpperCase()),
-                selected: selected,
-                onSelected: (v) {
-                  setState(() {
-                    if (v) {
-                      _visibleColumns.add(c);
-                    } else {
-                      _visibleColumns.remove(c);
-                    }
-                  });
-                },
-              );
-            }).toList(),
+          // ---------------- MODEL PERFORMANCE SECTION ----------------
+          ExpansionTile(
+            title: const Text("Model performance"),
+            initiallyExpanded: _showModelSection,
+            onExpansionChanged: (v) => setState(() => _showModelSection = v),
+            childrenPadding: const EdgeInsets.only(bottom: 16),
+            children: [
+              if (_showModelSection) _buildModelStats(),
+            ],
           ),
 
-          const SizedBox(height: 16),
+          // ---------------- DEVICES SECTION ----------------
+          ExpansionTile(
+            title: const Text("Devices"),
+            initiallyExpanded: _showDevicesSection,
+            onExpansionChanged: (v) => setState(() => _showDevicesSection = v),
+            childrenPadding: const EdgeInsets.only(bottom: 16),
+            children: [
+              if (_showDevicesSection) _buildDevicesTable(),
+            ],
+          ),
 
-          if (_tableLoading)
-            const Center(child: CircularProgressIndicator())
-          else
-            _buildTable(),
+          // ---------------- LOGS SECTION ----------------
+          ExpansionTile(
+            title: const Text("Logs"),
+            initiallyExpanded: _showLogsSection,
+            onExpansionChanged: (v) => setState(() => _showLogsSection = v),
+            childrenPadding: const EdgeInsets.only(bottom: 16),
+            children: [
+              if (_showLogsSection) ...[
+                // Column selector — applies to the logs table only.
+                Wrap(
+                  spacing: 8,
+                  children: _allColumns.map((c) {
+                    final selected = _visibleColumns.contains(c);
+
+                    return FilterChip(
+                      label: Text(c.toUpperCase()),
+                      selected: selected,
+                      onSelected: (v) {
+                        setState(() {
+                          if (v) {
+                            _visibleColumns.add(c);
+                          } else {
+                            _visibleColumns.remove(c);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 16),
+
+                if (_tableLoading)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  _buildTable(),
+              ],
+            ],
+          ),
         ],
       ),
     );
