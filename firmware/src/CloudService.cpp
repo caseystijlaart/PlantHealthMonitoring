@@ -81,23 +81,29 @@ bool CloudService::Patch(const String &url, const String &json)
     https.addHeader(F("Prefer"), F("return=minimal"));
 
     const int code = https.sendRequest("PATCH", json);
-    Log.printf("[HTTP] PATCH %s → %d\n", url.c_str(), code);
+    Log.printf("[HTTP] PATCH %d\n", code);
     https.end();
     return code >= 200 && code < 300;
 }
 
 // ── Public cloud operations ───────────────────────────────────────────────────
 
-void CloudService::RegisterDevice(const String &deviceId, std::int64_t nowUnix)
+void CloudService::RegisterDevice(const String &deviceId, const String &deviceName, std::int64_t nowUnix)
 {
     if (deviceId.isEmpty() || WiFi.status() != WL_CONNECTED)
         return;
 
     String json;
-    json.reserve(160);
+    json.reserve(192);
     json = "{\"device_id\":\"";
     json += deviceId;
     json += "\",\"status\":\"active\"";
+    if (!deviceName.isEmpty())
+    {
+        json += ",\"device_name\":\"";
+        json += deviceName;
+        json += "\"";
+    }
     if (nowUnix > 0)
     {
         char buf[21];

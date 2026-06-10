@@ -18,8 +18,8 @@ public:
     /** @brief Sets the Supabase project URL and anon key. */
     void SetConfig(const String &supabaseBase, const String &apiKey);
 
-    /** @brief Upserts the device row with status "active" and the current timestamp. */
-    void RegisterDevice(const String &deviceId, std::int64_t nowUnix);
+    /** @brief Upserts the device row with status "active", its name and the current timestamp. */
+    void RegisterDevice(const String &deviceId, const String &deviceName, std::int64_t nowUnix);
 
     /** @brief Deletes this device's row from the devices table. */
     void DeleteDevice(const String &deviceId);

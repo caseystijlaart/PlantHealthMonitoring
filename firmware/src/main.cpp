@@ -161,7 +161,7 @@ static void RunProvisioningMode()
     cloud.SetConfig(base, apiKey);
 
     timeService.SyncTimeWithNtp(10000);
-    cloud.RegisterDevice(gDeviceId, timeService.GetCurrentUnixTimeUtc());
+    cloud.RegisterDevice(gDeviceId, gDeviceName, timeService.GetCurrentUnixTimeUtc());
 
     NvsStorage::writeString("device_id", gDeviceId);
     fileStorage.WritePaired(ssid, password, apiKey, supabaseUrl);
