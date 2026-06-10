@@ -162,6 +162,15 @@ void CloudService::UpdateLastSeen(const String &deviceId, std::int64_t nowUnix)
     Patch(url, String("{\"last_seen\":\"") + buf + "\"}");
 }
 
+void CloudService::ReportModelVersion(const String &deviceId, const char *modelVersion)
+{
+    if (deviceId.isEmpty() || WiFi.status() != WL_CONNECTED)
+        return;
+
+    const String url = base_ + kDevicesEndpoint + "?device_id=eq." + deviceId;
+    Patch(url, String("{\"model_version\":\"") + modelVersion + "\"}");
+}
+
 bool CloudService::FetchPlantLabel(const String &deviceId, String &outLabel)
 {
     const String url = base_ + kSettingsEndpoint

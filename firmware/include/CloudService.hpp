@@ -27,6 +27,9 @@ public:
     /** @brief PATCHes the last_seen timestamp on the device row. */
     void UpdateLastSeen(const String &deviceId, std::int64_t nowUnix);
 
+    /** @brief PATCHes the model_version on the device row (called once per boot). */
+    void ReportModelVersion(const String &deviceId, const char *modelVersion);
+
     /**
      * @brief Fetches the plant label for this device from plant_settings.
      * @param[out] outLabel Populated on success.
