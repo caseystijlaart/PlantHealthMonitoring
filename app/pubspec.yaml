@@ -47,6 +47,11 @@ dependencies:
 
 dependency_overrides:
   path_provider_android: '>=2.2.0 <2.3.0'
+  # Stub out the iOS/macOS Bluetooth implementation so unsigned iOS builds
+  # contain no CoreBluetooth code (BLE is iOS-disabled in-app anyway).
+  # See local_overrides/flutter_blue_plus_darwin/pubspec.yaml.
+  flutter_blue_plus_darwin:
+    path: local_overrides/flutter_blue_plus_darwin
 
 dev_dependencies:
   flutter_test:

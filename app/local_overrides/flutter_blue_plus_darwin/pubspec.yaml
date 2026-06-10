@@ -1,0 +1,38 @@
+# Local stub replacing the real flutter_blue_plus_darwin package.
+#
+# Why: iOS builds are produced unsigned (codemagic.yaml, `--no-codesign`) and
+# sideloaded without proper codesigning, which does not allow Bluetooth. The
+# app already disables BLE on iOS at runtime (device_scan_screen.dart), but the
+# real darwin package would still compile and link CoreBluetooth native code
+# into the .app. This stub has no `flutter.plugin` section, so the Flutter
+# tool includes no iOS pod and no plugin registrant entry — Bluetooth is fully
+# excluded from the iOS binary at build time.
+#
+# Android is unaffected: it uses flutter_blue_plus_android, not this package.
+# To re-enable iOS Bluetooth later, remove the dependency_overrides entry in
+# app/pubspec.yaml.
+name: flutter_blue_plus_darwin
+description: Build-time stub that excludes Bluetooth from iOS builds.
+version: 7.0.3
+publish_to: none
+
+environment:
+  sdk: ^3.0.0
+  flutter: '>=3.7.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_blue_plus_platform_interface: 7.0.0
+
+# Dart-only plugin declaration: no `pluginClass` means no native code, no
+# CocoaPods pod, no CoreBluetooth. The no-op dartPluginClass keeps the
+# Flutter tool's plugin resolution happy.
+flutter:
+  plugin:
+    implements: flutter_blue_plus
+    platforms:
+      ios:
+        dartPluginClass: FlutterBluePlusDarwin
+      macos:
+        dartPluginClass: FlutterBluePlusDarwin
