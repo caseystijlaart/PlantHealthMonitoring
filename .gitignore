@@ -26,3 +26,4 @@ app/lib/secrets.dart
 # OS
 .DS_Store
 Thumbs.db
+releases/

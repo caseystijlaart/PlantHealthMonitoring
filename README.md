@@ -94,7 +94,6 @@ src/
   phm_app/               # Flutter app (iOS, Windows)
   pof-02/                # PoC-02 — dataset redesign and model revision
 datasets/                # Synthetic training data (MIT licence)
-releases/                # Pre-built binaries
 docs/
   manual/                # User manual
   system-design/         # Architecture diagrams and design docs
@@ -121,7 +120,13 @@ Training scripts and the synthetic dataset are in `datasets/`. The dataset is re
 - [User manual](docs/manual/manual.adoc)
 - [System design](docs/system-design/system-design.adoc)
 - [EU AI Act compliance](docs/legal-ethical/AI-Act-Compliance.adoc)
-- [iOS sideloading instructions](releases/phm/README.adoc)
+- [iOS sideloading instructions](docs/manual/ios-sideloading.adoc)
+
+---
+
+## Releases
+
+Pre-built binaries (iOS `.ipa` and ESP32 firmware `.bin`) are published on the [GitHub Releases page](https://github.com/caseystijlaart/PlantHealthMonitoring/releases) — latest: [v1.2](https://github.com/caseystijlaart/PlantHealthMonitoring/releases/tag/v1.2).
 
 ---
 
