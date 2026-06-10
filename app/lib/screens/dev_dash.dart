@@ -20,19 +20,22 @@ class _DevDashState extends State<DevDash> {
 
   String timeRange = "24h";
 
-  final List<String> _visibleColumns = ["device_name", "status", "message"];
+  final List<String> _visibleColumns = List.of(_allColumns);
 
   final Map<String, Set<String>> _columnFilters = {};
 
   List<Map<String, dynamic>> _tableRows = [];
   bool _tableLoading = false;
 
-  List<Map<String, dynamic>> _modelStats = [];
+  List<Map<String, dynamic>> _modelReadings = [];
   bool _modelStatsLoading = false;
 
-  bool _showModelSection = true;
-  bool _showDevicesSection = true;
-  bool _showLogsSection = true;
+  /// Filters for the model performance table (device_name / model_version).
+  final Map<String, Set<String>> _modelFilters = {};
+
+  bool _showModelSection = false;
+  bool _showDevicesSection = false;
+  bool _showLogsSection = false;
 
   List<Map<String, dynamic>> _deviceRows = [];
   bool _devicesLoading = false;
@@ -52,8 +55,10 @@ class _DevDashState extends State<DevDash> {
     try {
       final res = await supabase
           .from('devices')
-          .select('device_id,device_name,status,model_version,last_seen,'
-              'trigger_reset,trigger_measurement')
+          .select(
+            'device_id,device_name,status,model_version,last_seen,'
+            'trigger_reset,trigger_measurement',
+          )
           .order('last_seen', ascending: false);
 
       if (!mounted) return;
@@ -72,59 +77,55 @@ class _DevDashState extends State<DevDash> {
     return true;
   }
 
-  /// Aggregates plant_readings per model_version so model generations can be
-  /// compared (sample count, mean/min confidence, risk distribution).
+  /// Fetches the model-performance telemetry rows. The firmware writes these
+  /// to the dedicated model_metrics table (one row per monitoring cycle).
+  /// Aggregation happens in [_modelStats] so the header filters can re-group
+  /// without refetching.
   Future<void> _fetchModelStats() async {
     setState(() => _modelStatsLoading = true);
 
     try {
       final res = await supabase
-          .from('plant_readings')
-          .select('timestamp,model_version,confidence,risk_class')
-          .order('timestamp', ascending: false)
+          .from('model_metrics')
+          .select(
+            'created_at,plant_label,device_name,model_version,'
+            'confidence,risk_class,predicted_water_min',
+          )
+          .order('created_at', ascending: false)
           .limit(2000);
 
       final now = DateTime.now();
-      final byVersion = <String, List<Map<String, dynamic>>>{};
+      final rows = <Map<String, dynamic>>[];
       for (final row in List<Map<String, dynamic>>.from(res)) {
-        if (!_inTimeRange(DateTime.parse(row['timestamp']), now)) continue;
-        final v = row['model_version']?.toString() ?? 'pre-versioning';
-        byVersion.putIfAbsent(v, () => []).add(row);
+        if (!_inTimeRange(DateTime.parse(row['created_at']), now)) continue;
+        rows.add({
+          ...row,
+          'model_version': row['model_version']?.toString() ?? '-',
+          'device_name': row['device_name']?.toString() ?? '-',
+        });
       }
-
-      final stats = byVersion.entries.map((e) {
-        final rows = e.value;
-        final confs = rows
-            .map((r) => (r['confidence'] as num?)?.toDouble())
-            .whereType<double>()
-            .toList();
-        int risk(int c) =>
-            rows.where((r) => (r['risk_class'] as num?)?.toInt() == c).length;
-        return <String, dynamic>{
-          'version': e.key,
-          'readings': rows.length,
-          'avg_conf': confs.isEmpty
-              ? null
-              : confs.reduce((a, b) => a + b) / confs.length,
-          'low_conf_pct': confs.isEmpty
-              ? null
-              : 100.0 * confs.where((c) => c < 0.6).length / confs.length,
-          'risk_0': risk(0),
-          'risk_1': risk(1),
-          'risk_2': risk(2),
-        };
-      }).toList()
-        ..sort((a, b) =>
-            (b['version'] as String).compareTo(a['version'] as String));
 
       if (!mounted) return;
       setState(() {
-        _modelStats = stats;
+        _modelReadings = rows;
         _modelStatsLoading = false;
       });
     } catch (e) {
       if (mounted) setState(() => _modelStatsLoading = false);
     }
+  }
+
+  /// Model-metrics rows with the header filters applied.
+  List<Map<String, dynamic>> get _filteredModelReadings {
+    return _modelReadings.where((row) {
+      for (final e in _modelFilters.entries) {
+        if (e.value.isNotEmpty &&
+            !e.value.contains(row[e.key]?.toString() ?? '-')) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
   }
 
   Future<void> _fetchTable() async {
@@ -210,33 +211,58 @@ class _DevDashState extends State<DevDash> {
     if (_modelStatsLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_modelStats.isEmpty) {
-      return Text("No readings in range",
-          style: TextStyle(color: AppColors.textMid));
+    if (_modelReadings.isEmpty) {
+      return Text(
+        "No readings with model version v0.2 or above",
+        style: TextStyle(color: AppColors.textMid),
+      );
     }
 
-    String pct(dynamic v) => v == null ? "-" : (v as double).toStringAsFixed(1);
+    List<String> distinct(String key) =>
+        _modelReadings.map((r) => r[key]?.toString() ?? "-").toSet().toList()
+          ..sort();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
         columnSpacing: 20,
-        columns: const [
-          DataColumn(label: Text("MODEL")),
-          DataColumn(label: Text("READINGS"), numeric: true),
-          DataColumn(label: Text("AVG CONF"), numeric: true),
-          DataColumn(label: Text("CONF <0.6 %"), numeric: true),
-          DataColumn(label: Text("RISK 0/1/2")),
+        columns: [
+          DataColumn(
+            label: _filterableHeader(
+              "MODEL",
+              distinct('model_version'),
+              _modelFilters.putIfAbsent('model_version', () => <String>{}),
+            ),
+          ),
+          DataColumn(
+            label: _filterableHeader(
+              "DEVICE",
+              distinct('device_name'),
+              _modelFilters.putIfAbsent('device_name', () => <String>{}),
+            ),
+          ),
+          const DataColumn(label: Text("TIME")),
+          const DataColumn(label: Text("PLANT")),
+          const DataColumn(label: Text("RISK"), numeric: true),
+          const DataColumn(label: Text("CONF"), numeric: true),
+          const DataColumn(label: Text("PRED (D)"), numeric: true),
         ],
-        rows: _modelStats.map((s) {
-          final avg = s['avg_conf'] as double?;
-          return DataRow(cells: [
-            DataCell(Text(s['version'].toString())),
-            DataCell(Text(s['readings'].toString())),
-            DataCell(Text(avg == null ? "-" : avg.toStringAsFixed(3))),
-            DataCell(Text(pct(s['low_conf_pct']))),
-            DataCell(Text("${s['risk_0']} / ${s['risk_1']} / ${s['risk_2']}")),
-          ]);
+        rows: _filteredModelReadings.map((r) {
+          final conf = (r['confidence'] as num?)?.toDouble();
+          final pred = (r['predicted_water_min'] as num?)?.toDouble();
+          return DataRow(
+            cells: [
+              DataCell(Text(r['model_version'].toString())),
+              DataCell(Text(r['device_name'].toString())),
+              DataCell(Text(_fmtTimestamp(r['created_at'].toString()))),
+              DataCell(Text(r['plant_label']?.toString() ?? "-")),
+              DataCell(Text(r['risk_class']?.toString() ?? "-")),
+              DataCell(Text(conf == null ? "-" : conf.toStringAsFixed(3))),
+              DataCell(
+                Text(pred == null ? "-" : (pred / 1440.0).toStringAsFixed(1)),
+              ),
+            ],
+          );
         }).toList(),
       ),
     );
@@ -247,8 +273,10 @@ class _DevDashState extends State<DevDash> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_deviceRows.isEmpty) {
-      return Text("No devices registered",
-          style: TextStyle(color: AppColors.textMid));
+      return Text(
+        "No devices registered",
+        style: TextStyle(color: AppColors.textMid),
+      );
     }
 
     return SingleChildScrollView(
@@ -271,29 +299,110 @@ class _DevDashState extends State<DevDash> {
             if (d['trigger_measurement'] == true) "measure",
           ].join(", ");
 
-          return DataRow(cells: [
-            DataCell(Text(d['device_name']?.toString() ?? "-")),
-            DataCell(
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
+          return DataRow(
+            cells: [
+              DataCell(Text(d['device_name']?.toString() ?? "-")),
+              DataCell(
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    status.toUpperCase(),
+                    style: TextStyle(color: color),
+                  ),
                 ),
-                child: Text(status.toUpperCase(),
-                    style: TextStyle(color: color)),
               ),
-            ),
-            DataCell(Text(d['model_version']?.toString() ?? "-")),
-            DataCell(Text(d['last_seen'] == null
-                ? "-"
-                : _fmtTimestamp(d['last_seen'].toString()))),
-            DataCell(Text(triggers.isEmpty ? "-" : triggers)),
-            DataCell(Text(d['device_id']?.toString() ?? "-")),
-          ]);
+              DataCell(Text(d['model_version']?.toString() ?? "-")),
+              DataCell(
+                Text(
+                  d['last_seen'] == null
+                      ? "-"
+                      : _fmtTimestamp(d['last_seen'].toString()),
+                ),
+              ),
+              DataCell(Text(triggers.isEmpty ? "-" : triggers)),
+              DataCell(Text(d['device_id']?.toString() ?? "-")),
+            ],
+          );
         }).toList(),
       ),
+    );
+  }
+
+  /// Header cell — filterable columns open a multi-select dropdown anchored
+  /// to the header. An empty selection means "show all" (see _filteredRows).
+  Widget _columnLabel(String col) {
+    if (!_filterableColumns.contains(col)) {
+      return Text(col.toUpperCase());
+    }
+
+    final values =
+        _tableRows.map((r) => r[col]?.toString() ?? "-").toSet().toList()
+          ..sort();
+    return _filterableHeader(
+      col.toUpperCase(),
+      values,
+      _columnFilters.putIfAbsent(col, () => <String>{}),
+      upperValues: col == "status",
+    );
+  }
+
+  /// Multi-select dropdown header, shared by the logs and model tables.
+  Widget _filterableHeader(
+    String label,
+    List<String> values,
+    Set<String> selected, {
+    bool upperValues = false,
+  }) {
+    final active = selected.isNotEmpty;
+
+    return MenuAnchor(
+      menuChildren: [
+        ...values.map((v) {
+          return CheckboxMenuButton(
+            value: selected.contains(v),
+            closeOnActivate: false,
+            onChanged: (on) {
+              setState(() {
+                on == true ? selected.add(v) : selected.remove(v);
+              });
+            },
+            child: Text(upperValues ? v.toUpperCase() : v),
+          );
+        }),
+        if (active) ...[
+          const Divider(height: 1),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.clear, size: 16),
+            onPressed: () => setState(selected.clear),
+            child: const Text("Clear filter"),
+          ),
+        ],
+      ],
+      builder: (context, controller, _) {
+        return InkWell(
+          onTap: () =>
+              controller.isOpen ? controller.close() : controller.open(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label),
+              const SizedBox(width: 4),
+              Icon(
+                active ? Icons.filter_alt : Icons.arrow_drop_down,
+                size: 16,
+                color: active ? Colors.greenAccent : AppColors.textMid,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -312,7 +421,8 @@ class _DevDashState extends State<DevDash> {
         double colWidth(String col) =>
             col == "message" ? msgWidth : minColWidth;
 
-        final tableWidth = minColWidth + // timestamp column
+        final tableWidth =
+            minColWidth + // timestamp column
             _visibleColumns.fold<double>(0, (sum, c) => sum + colWidth(c)) +
             _visibleColumns.length * 20; // column spacing
 
@@ -329,7 +439,7 @@ class _DevDashState extends State<DevDash> {
               columns: [
                 const DataColumn(label: Text("TIME")),
                 ..._visibleColumns.map(
-                  (c) => DataColumn(label: Text(c.toUpperCase())),
+                  (c) => DataColumn(label: _columnLabel(c)),
                 ),
               ],
               rows: _filteredRows.map((row) {
@@ -415,9 +525,7 @@ class _DevDashState extends State<DevDash> {
             initiallyExpanded: _showModelSection,
             onExpansionChanged: (v) => setState(() => _showModelSection = v),
             childrenPadding: const EdgeInsets.only(bottom: 16),
-            children: [
-              if (_showModelSection) _buildModelStats(),
-            ],
+            children: [if (_showModelSection) _buildModelStats()],
           ),
 
           // ---------------- DEVICES SECTION ----------------
@@ -426,9 +534,7 @@ class _DevDashState extends State<DevDash> {
             initiallyExpanded: _showDevicesSection,
             onExpansionChanged: (v) => setState(() => _showDevicesSection = v),
             childrenPadding: const EdgeInsets.only(bottom: 16),
-            children: [
-              if (_showDevicesSection) _buildDevicesTable(),
-            ],
+            children: [if (_showDevicesSection) _buildDevicesTable()],
           ),
 
           // ---------------- LOGS SECTION ----------------
@@ -439,30 +545,6 @@ class _DevDashState extends State<DevDash> {
             childrenPadding: const EdgeInsets.only(bottom: 16),
             children: [
               if (_showLogsSection) ...[
-                // Column selector — applies to the logs table only.
-                Wrap(
-                  spacing: 8,
-                  children: _allColumns.map((c) {
-                    final selected = _visibleColumns.contains(c);
-
-                    return FilterChip(
-                      label: Text(c.toUpperCase()),
-                      selected: selected,
-                      onSelected: (v) {
-                        setState(() {
-                          if (v) {
-                            _visibleColumns.add(c);
-                          } else {
-                            _visibleColumns.remove(c);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 16),
-
                 if (_tableLoading)
                   const Center(child: CircularProgressIndicator())
                 else
