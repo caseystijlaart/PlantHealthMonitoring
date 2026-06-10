@@ -1,0 +1,15 @@
+= Data
+Sensor data is objective but limited in context.
+Missing context or calibration issues may bias recommendations, a recognized challenge in machine learning systems where biased or incomplete training data leads to skewed outputs (Mehrabi et al., 2021).
+
+[quote, Mehrabi et al., A Survey on Bias and Fairness in Machine Learning (2021)]
+____
+AI systems can be used in many sensitive environments to make important and life-changing decisions; thus, it is crucial to ensure that these decisions do not reflect discriminatory behavior toward certain groups or populations.
+____
+
+**Mitigations:** Continuous calibration, validation of sensors, and iterative model updates.
+Insights remain sustainable via adaptive models and regular data review.
+
+**Trust and consent:** Users are informed about data use, consent is explicit for any external communication, consistent with ethical AI development principles outlined by Wirtz et al. (2025).
+
+**Improvements:** Regularly review and document model assumptions, provide transparency in algorithm limitations.

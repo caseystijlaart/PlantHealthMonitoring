@@ -1,0 +1,12 @@
+= Transparency
+The system communicates plant recommendations as suggestions, not authoritative commands.
+Limitations and operational principles are clearly documented in the dashboard, reflecting the principle that users should be able to understand and question AI-generated outputs (Gunning & Aha, 2019).
+
+[quote, Gunning & Aha, DARPA's Explainable Artificial Intelligence (XAI) Program (2019)]
+____
+AI systems whose learned models and decisions can be understood and appropriately trusted by end users.
+____
+
+Transparency in AI systems is increasingly recognized as a foundational requirement for building user trust and ensuring responsible deployment (Wirtz et al., 2025).
+
+**Improvements:** Add FAQs, visual explanations of AI reasoning, and feedback channels for users to challenge outputs.

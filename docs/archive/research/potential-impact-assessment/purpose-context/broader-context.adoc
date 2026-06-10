@@ -1,0 +1,44 @@
+= Bigger Technological Context
+
+Looking at the bigger technological landscape, the Smart Desk Plant Monitoring system is part of a larger trend toward embedding Artificial Intelligence into physical environments.
+There is a growing push to integrate AI/ML directly into everyday objects and spaces, allowing them to sense, interpret, and respond to their surroundings in real time (Alajlan & Ibrahim, 2022).
+This shift shows that AI is no longer confined to traditional computing platforms but is becoming a more seamless and integrated part of our physical world.
+
+Embedded AI systems are increasingly being developed to improve the gap between humans and their environments, enabling more intuitive and responsive interactions.
+It has become more common for physical objects to be equipped with sensors and AI models that can interpret environmental conditions and communicate insights to users in an interpretable and interactive way (Sanchez-Iborra et al., 2022).
+
+Combining such aspects, sensors and machine learning models enable devices to translate environmental conditions into understandable feedback for users.
+In this setup, AI often acts like a bridge between people and their environment.
+Instead of users needing to interpret dashboards and data, the system can provide insights in a more natural and context-aware way, such as through subtle changes in lighting or notifications that appear when relevant.
+This approach can make technology feel more integrated into daily life, rather than something separate that requires constant attention.
+
+This project showcases aspects of Ambient Intelligence and Ubiquitous Computing.
+Ambient Intelligence refers to digital systems that just run in the background of our daily lives, smartly reacting to what's happening around them and what we need (Espinilla et al., 2019).
+Ubiquitous Computing, on the other hand, describes a future where computing is built right into everyday objects and places, instead of being limited to just computers or screens (Weiser, 1991).
+
+<<<
+    
+[quote, Mark Weiser, The Computer for the 21st Century (1991)]
+____
+The most profound technologies are those that disappear. They weave themselves into the fabric of everyday life until they are indistinguishable from it.
+____
+This Smart Desk Plant Monitoring system fits perfectly with these ideas because it puts sensing and AI directly into the physical space around the person using it.
+
+On top of all that, the project also explores how we might slowly move away from constantly looking at screens to interact with technology.
+It suggests we could use more subtle, situation-aware ways of communicating.
+Instead of needing to check a dashboard all the time, this system can tell us about environmental conditions using simple, background cues like changes in lighting or notifications that appear just when they're relevant.
+This shows a bigger trend in embedded AI and how people use computers, moving towards technology that feels calmer and less intrusive (Weiser & Brown, 1996).
+
+The basic ideas we used in this project can also be applied to all sorts of bigger areas in society and industry.
+
+Examples include:
+
+* Automotive systems capable of monitoring vehicle health, driver behavior, or environmental safety conditions.
+* Smart homes that adjust lighting, climate, and energy consumption based on contextual AI analysis.
+* Healthcare systems that monitor patient well-being through wearable or ambient sensing technologies.
+* Industrial environments where embedded AI assists with predictive maintenance and operational safety.
+* Energy management systems that optimize electricity usage and sustainability through real-time environmental monitoring.
+
+What all these developments show is that embedded AI isn't just about automating tasks. 
+It's more and more about making people more aware, helping them make better decisions, and improving how they interact with the places they live and work.
+

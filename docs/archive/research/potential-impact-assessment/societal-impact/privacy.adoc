@@ -1,0 +1,7 @@
+= Privacy
+The system processes environmental data locally, no personal identifiers are collected.
+In case of dashboard integration requiring external access, anonymization and encryption are enforced in line with the principles of the General Data Protection Regulation (European Parliament & Council, 2016).
+
+**Potential risks:** Indirect profiling if users’ patterns are combined with other datasets, a concern relevant even for seemingly non-personal sensor data (Radanliev et al., 2024).
+
+**Improvements:** Introduce strict data retention policies, anonymization safeguards, and user control over any transmitted data.

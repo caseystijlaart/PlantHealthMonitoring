@@ -1,0 +1,5 @@
+= Inclusivity
+Access may be limited by cost, technical literacy, or language barriers.
+Bias is minimal, as the system is largely universal for plant types, but cultural context may influence interpretation.
+
+**Improvements:** Multi-language support, accessible interface design following established accessibility guidelines such as the Web Content Accessibility Guidelines (W3C, 2018), and open-source options for wider adoption.

@@ -1,0 +1,17 @@
+= Utopian Future
+
+When looking into the future, for example the next 20 to 50 years, embedded AI systems will be integrated into everyday environments in a way that helps people understand and interact with their surroundings without the need for constant screen interaction and complex dashboards, which for most are too overwhelming.
+This vision aligns with the concept of Ubiquitous Computing, where technology disappears into the fabric of everyday life (Weiser, 1991), and Ambient Intelligence, where environments intelligently respond to human presence and needs (Espinilla et al., 2019).
+Small-scale AI devices could assist users in understanding environmental conditions, sustainability, and resource usage through subtle cues and feedback mechanisms, such as changes in lighting or notifications that appear when relevant, in line with the concept of calm technology (Weiser & Brown, 1996).
+
+[quote, Espinilla et al., Ubiquitous Computing and Ambient Intelligence (2019)]
+____
+Ambient Intelligence represents a new generation of user-centred computing environments and systems. These solutions aim to find new ways to better integrate information technology into everyday life devices and activities.
+____
+
+This is a future where technology is more ambient and context-aware, providing feedback and insights without relying on constant screen interaction.
+Having humans become more environmentally aware and connected to their surroundings through embedded AI could lead to a more sustainable and harmonious relationship with nature.
+When one understands what is happening in their environment and how their actions impact the ecosystem, they can make more informed decisions that benefit both themselves and the planet.
+People are more willing to take care of their plants and the environment when they understand the conditions and how to improve them, leading to healthier plants and greener spaces.
+This could contribute to increased environmental awareness and urban greenery, as people become more connected to their plants and the environment around them.
+AI acts as a supportive and educational tool rather than replacing human decision-making, empowering users to learn and make informed choices — a principle central to human-driven AI development (Hu et al., 2025).

@@ -1,0 +1,41 @@
+= Potential Impact Assesment  : Minor AI for Society
+:numbered:
+:imagesdir: images
+:title-page: true
+:author: Casey Stijlaart
+:docdatetime: datetime (ISO)
+:doctype: report
+:toc:
+:toclevels: 2
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+:xrefstyle: short
+:pdf-theme: default
+:pdf-fontsize: 11
+
+:leveloffset:  +1
+<<<
+
+include::document-history.adoc[]
+
+<<<
+
+include::purpose-context/purpose-context.adoc[]
+
+<<<
+
+include::societal-impact/societal-impact.adoc[]
+
+<<<
+
+include::future-scenarios/future-scenarios.adoc[]
+
+<<<
+
+include::impact-reflection/impact-reflection.adoc[]
+
+<<<
+
+include::references.adoc[]
+
+:leveloffset: -1

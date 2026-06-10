@@ -1,0 +1,6 @@
+= Human Values
+Strengthened values include environmental awareness, autonomy in decision-making, and learning about AI and plants.
+Placing humans at the center of AI development — where the system serves and educates rather than replaces human judgment — is a core principle of responsible AI (Hu et al., 2025).
+Ensuring that users retain meaningful control over how they interpret and act on AI suggestions is equally important for preserving human autonomy (Väänänen et al., 2021).
+
+**Improvements:** Emphasize educational framing, provide autonomy in decision-making, and avoid gamification that pressures compliance.
