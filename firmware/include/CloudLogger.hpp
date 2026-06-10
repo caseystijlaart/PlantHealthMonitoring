@@ -1,3 +1,11 @@
+/**
+ * @file CloudLogger.hpp
+ * @brief Tee logger that mirrors Serial output and batch-uploads log lines to the cloud logs table.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #pragma once
 
 #include <Arduino.h>
@@ -25,36 +33,47 @@
 class CloudLogger : public Print
 {
 public:
-    // Print interface — mirror to Serial and buffer a line for upload.
+    /**
+     * @brief Print interface — mirror to Serial and buffer a line for upload.
+     */
     size_t write(uint8_t c) override;
     size_t write(const uint8_t *buffer, size_t size) override;
 
-    // Supabase REST endpoint + credentials used for uploads.
-    // baseUrl is e.g. "https://<proj>.supabase.co/rest/v1"; "/logs" is appended.
-    // The values are copied — they may come from a temporary String.
+    /**
+     * @brief Configures the supabase rest endpoint
+     * @param baseUrl the supabase base url
+     * @param apiKey publishable key obtained from supabase
+     * @param caCert certificate
+     */
     void configure(const String &baseUrl, const String &apiKey, const char *caCert);
 
-    // Upload all queued lines as a single batched insert into `logs`.
-    // No-op when the queue is empty, WiFi is down, deviceId is empty, or the
-    // logger has not been configured yet.
-    // The `timestamp` column is stamped by the database (default now()).
+    /**
+     * @brief Upload all queued lines as a single batched insert into `logs`.
+     * @details No-op when the queue is empty, WiFi is down, deviceId is empty, or the logger has not been configured yet.
+     * @param devideId the given device
+     * @param deviceName the given device name
+     */
     void uploadPending(const String &deviceId, const String &deviceName);
 
 private:
-    struct Entry { const char *status; String message; };
+    struct Entry
+    {
+        const char *status;
+        String message;
+    };
 
-    void               finishLine();
+    void finishLine();
     static const char *classify(const String &line);
-    static String      jsonEscape(const String &s);
+    static String jsonEscape(const String &s);
 
-    String             line_;
+    String line_;
     std::vector<Entry> queue_;
-    String             baseUrl_;
-    String             apiKey_;
-    const char        *caCert_ = nullptr;
+    String baseUrl_;
+    String apiKey_;
+    const char *caCert_ = nullptr;
 
-    static constexpr size_t kMaxLine   = 240; // per-line cap (chars)
-    static constexpr size_t kMaxQueued = 60;  // ring-buffer cap (lines)
+    static constexpr size_t kMaxLine = 240;  // per-line cap (chars)
+    static constexpr size_t kMaxQueued = 60; // ring-buffer cap (lines)
 };
 
 // Single global instance, defined in CloudLogger.cpp.

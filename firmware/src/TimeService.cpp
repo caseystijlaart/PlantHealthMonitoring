@@ -1,3 +1,11 @@
+/**
+ * @file TimeService.cpp
+ * @brief Implementation of TimeService. NTP time synchronization and timestamp formatting.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "TimeService.hpp"
 #include "CloudLogger.hpp"
 

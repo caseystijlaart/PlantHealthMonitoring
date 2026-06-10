@@ -1,3 +1,11 @@
+/**
+ * @file TempHumiditySensor.hpp
+ * @brief DHT temperature and humidity sensor driver.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #pragma once
 
 #include <DHT.h>
@@ -6,7 +14,8 @@
 /**
  * @brief A class for managing the temperature and humidity sensor.
  */
-class TempHumiditySensor {
+class TempHumiditySensor
+{
 public:
     /**
      * @brief Constructs a new temperature and humidity sensor instance.
@@ -32,4 +41,3 @@ private:
     int dhtType_;
     mutable DHT dht_;
 };
-

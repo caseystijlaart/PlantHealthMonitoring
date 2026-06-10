@@ -1,8 +1,11 @@
 /**
  * @file SensorHistory.hpp
- * @brief Fixed-capacity ring buffer for sensor snapshots.
+ * @brief Fixed-capacity ring buffer of sensor snapshots.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
  */
-
 #pragma once
 
 #include <cstddef>
@@ -12,10 +15,10 @@
 
 /**
  * @brief Stores a rolling window of sensor snapshots up to a fixed capacity.
- *
  * Older entries are discarded when the buffer is full.
  */
-class SensorHistory {
+class SensorHistory
+{
 public:
     /**
      * @brief Constructs a history buffer with the given capacity.
@@ -27,7 +30,7 @@ public:
      * @brief Appends a snapshot, discarding the oldest entry if at capacity.
      * @param snapshot Snapshot to add.
      */
-    void Add(const SensorSnapshot& snapshot);
+    void Add(const SensorSnapshot &snapshot);
 
     /** @return Number of snapshots currently stored. */
     std::size_t Size() const;
@@ -36,12 +39,12 @@ public:
     bool Empty() const;
 
     /** @return The most recently added snapshot. */
-    const SensorSnapshot& Latest() const;
+    const SensorSnapshot &Latest() const;
 
     /** @return Read-only view of all stored snapshots, oldest first. */
-    const std::vector<SensorSnapshot>& Data() const;
+    const std::vector<SensorSnapshot> &Data() const;
 
 private:
-    std::size_t              capacity_;
+    std::size_t capacity_;
     std::vector<SensorSnapshot> data_;
 };

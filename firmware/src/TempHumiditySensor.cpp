@@ -1,3 +1,11 @@
+/**
+ * @file TempHumiditySensor.cpp
+ * @brief Implementation of TempHumiditySensor. DHT temperature and humidity sensor driver.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "TempHumiditySensor.hpp"
 
 #include <Arduino.h>

@@ -1,3 +1,11 @@
+/**
+ * @file CloudLogger.cpp
+ * @brief Implementation of CloudLogger. Tee logger that mirrors Serial output and batch-uploads log lines to the cloud logs table.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "CloudLogger.hpp"
 
 #include <WiFi.h>
@@ -8,26 +16,32 @@ CloudLogger Log;
 
 size_t CloudLogger::write(uint8_t c)
 {
-    Serial.write(c);              // mirror to the serial monitor in real time
-
-    if (c == '\r') return 1;      // ignore CR; the line ends on '\n'
-    if (c == '\n') { finishLine(); return 1; }
-    if (line_.length() < kMaxLine) line_ += static_cast<char>(c);
+    if (c == '\r')
+        return 1;
+    if (c == '\n')
+    {
+        finishLine();
+        return 1;
+    }
+    if (line_.length() < kMaxLine)
+        line_ += static_cast<char>(c);
     return 1;
 }
 
 size_t CloudLogger::write(const uint8_t *buffer, size_t size)
 {
-    for (size_t i = 0; i < size; ++i) write(buffer[i]);
+    for (size_t i = 0; i < size; ++i)
+        write(buffer[i]);
     return size;
 }
 
 void CloudLogger::finishLine()
 {
-    if (line_.isEmpty()) return;
+    if (line_.isEmpty())
+        return;
     if (queue_.size() >= kMaxQueued)
-        queue_.erase(queue_.begin());   // drop the oldest line if we overflow
-    queue_.push_back({ classify(line_), line_ });
+        queue_.erase(queue_.begin());
+    queue_.push_back({classify(line_), line_});
     line_ = "";
 }
 
@@ -35,9 +49,9 @@ const char *CloudLogger::classify(const String &line)
 {
     String l = line;
     l.toLowerCase();
-    if (l.indexOf("fail")      >= 0 || l.indexOf("error")  >= 0 ||
+    if (l.indexOf("fail") >= 0 || l.indexOf("error") >= 0 ||
         l.indexOf("timed out") >= 0 || l.indexOf("timeout") >= 0 ||
-        l.indexOf("could not") >= 0 || l.indexOf("unable")  >= 0)
+        l.indexOf("could not") >= 0 || l.indexOf("unable") >= 0)
         return "ERROR";
     return "OK";
 }
@@ -45,8 +59,8 @@ const char *CloudLogger::classify(const String &line)
 void CloudLogger::configure(const String &baseUrl, const String &apiKey, const char *caCert)
 {
     baseUrl_ = baseUrl;
-    apiKey_  = apiKey;
-    caCert_  = caCert;
+    apiKey_ = apiKey;
+    caCert_ = caCert;
 }
 
 String CloudLogger::jsonEscape(const String &s)
@@ -58,22 +72,32 @@ String CloudLogger::jsonEscape(const String &s)
         const char c = s[i];
         switch (c)
         {
-            case '"':  out += "\\\""; break;
-            case '\\': out += "\\\\"; break;
-            case '\n': out += "\\n";  break;
-            case '\r': out += "\\r";  break;
-            case '\t': out += "\\t";  break;
-            default:
-                if (static_cast<unsigned char>(c) < 0x20)
-                {
-                    char buf[7];
-                    snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned char>(c));
-                    out += buf;
-                }
-                else
-                {
-                    out += c;
-                }
+        case '"':
+            out += "\\\"";
+            break;
+        case '\\':
+            out += "\\\\";
+            break;
+        case '\n':
+            out += "\\n";
+            break;
+        case '\r':
+            out += "\\r";
+            break;
+        case '\t':
+            out += "\\t";
+            break;
+        default:
+            if (static_cast<unsigned char>(c) < 0x20)
+            {
+                char buf[7];
+                snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned char>(c));
+                out += buf;
+            }
+            else
+            {
+                out += c;
+            }
         }
     }
     return out;
@@ -81,15 +105,16 @@ String CloudLogger::jsonEscape(const String &s)
 
 void CloudLogger::uploadPending(const String &deviceId, const String &deviceName)
 {
-    if (queue_.empty())                  return;
-    if (baseUrl_.isEmpty())              return;
-    if (deviceId.isEmpty())              return;
-    if (WiFi.status() != WL_CONNECTED)   return;
+    if (queue_.empty())
+        return;
+    if (baseUrl_.isEmpty())
+        return;
+    if (deviceId.isEmpty())
+        return;
+    if (WiFi.status() != WL_CONNECTED)
+        return;
 
-    // One JSON array → PostgREST inserts every queued line in a single request.
-    // The `timestamp` column is left out on purpose — the database fills it with
-    // its default now() at insert time.
-    const String dId   = jsonEscape(deviceId);
+    const String dId = jsonEscape(deviceId);
     const String dName = jsonEscape(deviceName);
 
     String body;
@@ -97,11 +122,16 @@ void CloudLogger::uploadPending(const String &deviceId, const String &deviceName
     body = "[";
     for (unsigned i = 0; i < queue_.size(); ++i)
     {
-        if (i) body += ",";
-        body += "{\"device_id\":\"";      body += dId;
-        body += "\",\"device_name\":\"";  body += dName;
-        body += "\",\"status\":\"";       body += queue_[i].status;
-        body += "\",\"message\":\"";      body += jsonEscape(queue_[i].message);
+        if (i)
+            body += ",";
+        body += "{\"device_id\":\"";
+        body += dId;
+        body += "\",\"device_name\":\"";
+        body += dName;
+        body += "\",\"status\":\"";
+        body += queue_[i].status;
+        body += "\",\"message\":\"";
+        body += jsonEscape(queue_[i].message);
         body += "\"}";
     }
     body += "]";
@@ -114,19 +144,14 @@ void CloudLogger::uploadPending(const String &deviceId, const String &deviceName
     if (!https.begin(client, url))
         return;
 
-    https.addHeader("Content-Type",  "application/json");
-    https.addHeader("apikey",        apiKey_);
+    https.addHeader("Content-Type", "application/json");
+    https.addHeader("apikey", apiKey_);
     https.addHeader("Authorization", String("Bearer ") + apiKey_);
-    https.addHeader("Prefer",        "return=minimal");
+    https.addHeader("Prefer", "return=minimal");
 
     const int code = https.POST(body);
     https.end();
 
-    // Use raw Serial here — never this logger — so uploading doesn't enqueue
-    // more log lines and recurse.
-    Serial.printf("[Log] Uploaded %u line(s) -> %d\n",
-                  static_cast<unsigned>(queue_.size()), code);
-
     if (code >= 200 && code < 300)
-        queue_.clear();   // keep the queue on failure so lines retry next time
+        queue_.clear();
 }

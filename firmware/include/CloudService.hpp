@@ -1,3 +1,11 @@
+/**
+ * @file CloudService.hpp
+ * @brief Supabase REST client for the devices, plant_settings, plant_readings, and model_metrics tables.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #pragma once
 
 #include <Arduino.h>
@@ -44,9 +52,9 @@ public:
      * @return true if settings were fetched.
      */
     bool FetchProfileSettings(const String &plantLabel,
-                               PlantRuleProfile &outProfile,
-                               uint8_t &outVersion,
-                               uint8_t currentVersion);
+                              PlantRuleProfile &outProfile,
+                              uint8_t &outVersion,
+                              uint8_t currentVersion);
 
     /** @brief POSTs a JSON reading payload to plant_readings. */
     void SendReading(const char *json);
@@ -66,10 +74,10 @@ public:
     bool CheckTriggerMeasurement(const String &deviceId);
 
 private:
-    bool   Post (const String &url, const String &json);
-    String Get  (const String &url);
-    bool   Patch(const String &url, const String &json);
-    void   AddAuth(class HTTPClient &https);
+    bool Post(const String &url, const String &json);
+    String Get(const String &url);
+    bool Patch(const String &url, const String &json);
+    void AddAuth(class HTTPClient &https);
 
     static PreferenceBand ParsePreference(const String &payload, const char *key);
 
@@ -77,7 +85,7 @@ private:
     String apiKey_;
 
     static constexpr const char *kReadingsEndpoint = "/plant_readings";
-    static constexpr const char *kMetricsEndpoint  = "/model_metrics";
-    static constexpr const char *kDevicesEndpoint  = "/devices";
+    static constexpr const char *kMetricsEndpoint = "/model_metrics";
+    static constexpr const char *kDevicesEndpoint = "/devices";
     static constexpr const char *kSettingsEndpoint = "/plant_settings";
 };

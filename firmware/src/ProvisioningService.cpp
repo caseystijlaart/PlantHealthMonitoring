@@ -1,8 +1,11 @@
 /**
  * @file ProvisioningService.cpp
- * @brief Implementation of the BLE provisioning service.
+ * @brief Implementation of ProvisioningService. BLE provisioning service receiving WiFi and Supabase credentials from the app.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
  */
-
 #include "ProvisioningService.hpp"
 #include "CloudLogger.hpp"
 
@@ -59,11 +62,6 @@ class SupabaseUrlCallback : public BLECharacteristicCallbacks {
     }
 };
 
-// Restarts advertising when a client disconnects before provisioning finishes.
-// The ESP32 stops advertising while connected and does NOT auto-resume, so
-// without this the device becomes undiscoverable after a cancelled setup.
-// Re-advertising is deferred to maintainAdvertising() (called from the wait
-// loop) rather than done here, to let the BLE stack settle after the disconnect.
 class ProvServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer *) override {
         ProvisioningService::_onClientConnected();
@@ -146,7 +144,7 @@ void ProvisioningService::maintainAdvertising()
 {
     if (!reAdvertise_) return;
     reAdvertise_ = false;
-    delay(500);                       // let the BLE stack settle after disconnect
+    delay(500);                     
     BLEDevice::startAdvertising();
     Log.println(F("[BLE] Client disconnected before provisioning — re-advertising"));
 }
@@ -158,8 +156,6 @@ void ProvisioningService::_onClientConnected()
 
 void ProvisioningService::_onClientDisconnected()
 {
-    // Only re-advertise if provisioning didn't complete; a disconnect right
-    // after the final write is the normal end-of-provisioning teardown.
     if (!isProvisioned())
         reAdvertise_ = true;
 }

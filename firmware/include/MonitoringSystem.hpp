@@ -1,8 +1,11 @@
 /**
  * @file MonitoringSystem.hpp
- * @brief Top-level monitoring system — orchestrates sensors, ML, and recommendations.
+ * @brief Top-level monitoring system orchestrating sensors, ML, and recommendations.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
  */
-
 #pragma once
 
 #include <cstdint>
@@ -46,7 +49,7 @@ public:
     /**
      * @brief Initializes the monitoring system.
      * @return True if initialization was successful, false otherwise.
-     */                    
+     */
     bool Init();
 
     /**
@@ -54,7 +57,7 @@ public:
      * @return The result of the monitoring cycle.
      */
     MonitoringCycleResult RunCycleDetailed();
-    
+
     /**
      * @brief Sets the plant profile.
      * @param plantProfile The plant rule profile.

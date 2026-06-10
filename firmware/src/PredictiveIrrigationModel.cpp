@@ -1,3 +1,11 @@
+/**
+ * @file PredictiveIrrigationModel.cpp
+ * @brief Implementation of PredictiveIrrigationModel. Regression MLP predicting the minutes until the plant needs watering.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "PredictiveIrrigationModel.hpp"
 
 #include <algorithm>
@@ -30,7 +38,7 @@ float PredictiveIrrigationModel::PredictMinutesUntilWatering(
         {
             z += x[i] * kRegW1[i][j];
         }
-        hidden[j] = std::max(0.0f, z); // ReLU
+        hidden[j] = std::max(0.0f, z);
     }
 
     float logMinutes = kRegB2;

@@ -1,10 +1,20 @@
+/**
+ * @file Certs.hpp
+ * @brief Root CA certificate used for TLS connections to Supabase.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #pragma once
 
-// Amazon Root CA 1 — used by Supabase (AWS-hosted infrastructure).
-// If HTTPS connections fail after flashing, refresh this cert by running:
-//   openssl s_client -connect yjjpgvsycxlaqubvedoa.supabase.co:443 -showcerts 2>/dev/null \
-//     | awk '/BEGIN CERT/{p=1} p; /END CERT/{p=0}' | tail -n +$((...))
-// or export the root CA from your browser's certificate viewer.
+/** Amazon Root CA 1 — used by Supabase (AWS-hosted infrastructure).
+ * If HTTPS connections fail after flashing, refresh this cert by running:
+ *   openssl s_client -connect yjjpgvsycxlaqubvedoa.supabase.co:443 -showcerts 2>/dev/null \
+ *     | awk '/BEGIN CERT/{p=1} p; /END CERT/{p=0}' | tail -n +$((...))
+ * or export the root CA from your browser's certificate viewer.
+ */
+
 static const char kSupabaseRootCA[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
 MIIDejCCAmKgAwIBAgIQf+UwvzMTQ77dghYQST2KGzANBgkqhkiG9w0BAQsFADBX
@@ -23,7 +33,7 @@ Yy5wa2kuZ29vZy9yL2dzcjEuY3JsMBMGA1UdIAQMMAowCAYGZ4EMAQIBMA0GCSqG
 SIb3DQEBCwUAA4IBAQAYQrsPBtYDh5bjP2OBDwmkoWhIDDkic574y04tfzHpn+cJ
 odI2D4SseesQ6bDrarZ7C30ddLibZatoKiws3UL9xnELz4ct92vID24FfVbiI1hY
 +SW6FoVHkNeWIP0GCbaM4C6uVdF5dTUsMVs/ZbzNnIdCp5Gxmx5ejvEau8otR/Cs
-kGN+hr/W5GvT1tMBjgWKZ1i4//emhA1JG1BbPzoLJQvyEotc03lXjTaCzv8mEbep
+kGN+hr/W5GvT1tMBjgWKZ1i4*emhA1JG1BbPzoLJQvyEotc03lXjTaCzv8mEbep
 8RqZ7a2CPsgRbuvTPBwcOMBBmuFeU88+FSBX6+7iP0il8b4Z0QFqIwwMHfs/L6K1
 vepuoxtGzi4CZ68zJpiq1UvSqTbFJjtbD4seiMHl
 -----END CERTIFICATE-----

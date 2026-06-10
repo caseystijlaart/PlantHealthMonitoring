@@ -1,3 +1,11 @@
+/**
+ * @file FileStorageService.cpp
+ * @brief Implementation of FileStorageService. LittleFS-backed storage for the sensor history CSV and the pairing document.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "FileStorageService.hpp"
 #include "CloudLogger.hpp"
 
@@ -6,8 +14,6 @@
 #include <vector>
 
 #include "TimeService.hpp"
-
-// ── Internal helpers ──────────────────────────────────────────────────────────
 
 static std::vector<String> ParseCsvLine(const String &line)
 {
@@ -77,8 +83,6 @@ static std::int64_t ParseTimestamp(const String &ts)
     return result < 0 ? 0 : static_cast<std::int64_t>(result);
 }
 
-// ── FileStorageService ────────────────────────────────────────────────────────
-
 FileStorageService::FileStorageService(TimeService &timeService)
     : timeService_(timeService) {LittleFS.begin(true);}
 
@@ -87,8 +91,6 @@ void FileStorageService::StripCr(String &s)
     if (s.endsWith("\r"))
         s.remove(s.length() - 1);
 }
-
-// ── Pairing document ──────────────────────────────────────────────────────────
 
 void FileStorageService::WritePaired(const String &ssid,
                                      const String &password,
@@ -160,7 +162,6 @@ bool FileStorageService::ReadPairing(String &ssidOut,
     return paired;
 }
 
-// ── Sensor history ────────────────────────────────────────────────────────────
 
 void FileStorageService::ClearHistory(const char *filePath)
 {
@@ -263,7 +264,6 @@ bool FileStorageService::AppendToHistoryFile(const char *filePath,
     file.println(line);
     file.close();
 
-    // Trim to keep flash usage bounded.
     File countFile = LittleFS.open(filePath, FILE_READ);
     std::size_t rowCount = 0;
     if (countFile)

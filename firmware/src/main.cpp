@@ -1,8 +1,11 @@
 /**
  * @file main.cpp
  * @brief PlantHealthMonitor ESP32 firmware — main application entry point.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
  */
-
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_system.h>
@@ -18,19 +21,15 @@
 #include "Certs.hpp"
 #include "ModelExport.hpp"
 
-/** File paths */
 static constexpr const char *kHistoryFile = "/sensor_history.csv";
 
-/** Timing constants */
 constexpr unsigned long kIntervalMs = 1000UL * 60UL * 60UL * 3UL; ///< 3-hour monitoring cycle.
 constexpr unsigned long kCommandCheckMs = 5000UL;                 ///< Command poll interval (5 s).
 constexpr std::size_t kHistorySize = 56;
 constexpr uint8_t kMaxNoPlantTicks = 30;
 
-/** ML model generation baked into this firmware (stamped by retrain_from_logs.py). */
 constexpr const char *kModelVersion = modelexport::kModelVersion;
 
-/** Subsystems */
 SoilMoistureSensor soilSensor(34, 3500.0f, 1450.0f);
 TempHumiditySensor dhtSensor(4, 22);
 LightSensor lightSensor(35);
@@ -44,7 +43,6 @@ FileStorageService fileStorage(timeService);
 WiFiCommunication wifi;
 CloudService cloud;
 
-/** Global state */
 String gDeviceId;
 String gPlantLabel;
 String gDeviceName;
@@ -55,7 +53,6 @@ uint8_t currentVersion = 0;
 uint8_t gNoPlantCount = 0;
 bool gJustProvisioned = false;
 
-/** helper functions */
 static String DeriveDeviceName()
 {
     uint8_t mac[6];
@@ -67,8 +64,6 @@ static String DeriveDeviceName()
 
 static void PerformFactoryReset()
 {
-    // Flush any pending logs while we still have a device_id and credentials —
-    // after the wipe + reboot they'd be lost.
     Log.uploadPending(gDeviceId, gDeviceName);
 
     fileStorage.ClearHistory(kHistoryFile);
@@ -96,9 +91,6 @@ static void RunMonitoringCycle()
     const auto &snap = result.snapshot;
     const auto &rec = result.recommendation;
 
-    // plant_readings is plant-scoped: the app queries/subscribes by plant_label
-    // and never reads device_id from this table, and device_id is volatile
-    // (regenerated on re-provision), so it is intentionally left out here.
     char json[512];
     snprintf(json, sizeof(json),
              "{\"request_id\":%lld,"
@@ -121,9 +113,6 @@ static void RunMonitoringCycle()
 
     cloud.SendReading(json);
 
-    // Model-performance telemetry goes to its own table (model_metrics) to
-    // keep plant_readings lean. device_name is MAC-derived and stable across
-    // re-provisioning, giving the dev dashboard exact per-device attribution.
     char metrics[320];
     snprintf(metrics, sizeof(metrics),
              "{\"request_id\":%lld,"
@@ -144,7 +133,6 @@ static void RunMonitoringCycle()
     cloud.SendModelMetrics(metrics);
 }
 
-/** Provisioning mode */
 static void RunProvisioningMode()
 {
     Log.println(F("[Prov] Entering BLE provisioning mode"));
@@ -156,7 +144,7 @@ static void RunProvisioningMode()
     {
         delay(100);
         yield();
-        ProvisioningService::maintainAdvertising(); // re-advertise if a setup was cancelled
+        ProvisioningService::maintainAdvertising();
     }
 
     const String ssid = ProvisioningService::getSsid();
@@ -178,8 +166,6 @@ static void RunProvisioningMode()
         ESP.restart();
         return;
     }
-
-    // Remove trailing /rest/v1 if the app sent just the project URL.
     String base = supabaseUrl;
     if (!base.endsWith("/rest/v1"))
         base += "/rest/v1";
@@ -196,12 +182,8 @@ static void RunProvisioningMode()
     Log.println(F("[Prov] Provisioning complete"));
 }
 
-/** Main application entry point */
 void setup()
 {
-    Serial.begin(115200);
-    delay(200);
-
     gDeviceId = NvsStorage::readString("device_id");
     gDeviceName = DeriveDeviceName();
     Log.printf("[Init] Device name: %s\n", gDeviceName.c_str());
@@ -213,7 +195,6 @@ void setup()
     {
         Log.println(F("[Init] Not paired — entering BLE provisioning mode"));
         RunProvisioningMode();
-        // After RunProvisioningMode returns, re-read the just-written values.
         fileStorage.ReadPairing(ssid, password, apiKey, supabaseUrl);
     }
     else
@@ -226,9 +207,6 @@ void setup()
         base += "/rest/v1";
     cloud.SetConfig(base, apiKey);
 
-    // Mirror serial output to the cloud `logs` table.  Lines emitted earlier in
-    // boot/provisioning were queued and flush on the first uploadPending() once
-    // WiFi is up.
     Log.configure(base, apiKey, kSupabaseRootCA);
 
     wifi.SetCredentials(ssid, password);
@@ -292,7 +270,6 @@ void setup()
 
     lastRun = lastCommandCheck = millis();
 
-    // Flush everything logged during boot now that we're online.
     Log.uploadPending(gDeviceId, gDeviceName);
 }
 

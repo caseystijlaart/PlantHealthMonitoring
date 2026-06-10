@@ -1,8 +1,11 @@
 /**
  * @file ProvisioningService.hpp
- * @brief BLE provisioning service for the PlantHealthMonitor ESP32 firmware.
+ * @brief BLE provisioning service receiving WiFi and Supabase credentials from the app.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
  */
-
 #pragma once
 
 #include <Arduino.h>
@@ -13,12 +16,12 @@
  * All UUIDs must match the values declared in the Flutter app
  * (@c lib/services/ble_constants.dart).
  */
-static constexpr const char *kProvisionServiceUuid  = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-static constexpr const char *kSsidCharUuid          = "beb5483e-36e1-4688-b7f5-ea07361b26a8"; ///< WRITE
-static constexpr const char *kPasswordCharUuid      = "beb5483e-36e1-4688-b7f5-ea07361b26a9"; ///< WRITE
-static constexpr const char *kDeviceIdCharUuid      = "beb5483e-36e1-4688-b7f5-ea07361b26aa"; ///< READ
-static constexpr const char *kApiKeyCharUuid        = "beb5483e-36e1-4688-b7f5-ea07361b26ab"; ///< WRITE
-static constexpr const char *kSupabaseUrlCharUuid   = "beb5483e-36e1-4688-b7f5-ea07361b26ac"; ///< WRITE
+static constexpr const char *kProvisionServiceUuid = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+static constexpr const char *kSsidCharUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8";        ///< WRITE
+static constexpr const char *kPasswordCharUuid = "beb5483e-36e1-4688-b7f5-ea07361b26a9";    ///< WRITE
+static constexpr const char *kDeviceIdCharUuid = "beb5483e-36e1-4688-b7f5-ea07361b26aa";    ///< READ
+static constexpr const char *kApiKeyCharUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ab";      ///< WRITE
+static constexpr const char *kSupabaseUrlCharUuid = "beb5483e-36e1-4688-b7f5-ea07361b26ac"; ///< WRITE
 
 /**
  * @brief Static BLE provisioning service.
@@ -54,12 +57,12 @@ public:
     static const String &getSupabaseUrl();
 
     /// @cond INTERNAL
-    static void _onSsidWritten        (const String &v);
-    static void _onPasswordWritten    (const String &v);
-    static void _onApiKeyWritten      (const String &v);
-    static void _onSupabaseUrlWritten (const String &v);
-    static void _onClientConnected    ();
-    static void _onClientDisconnected ();
+    static void _onSsidWritten(const String &v);
+    static void _onPasswordWritten(const String &v);
+    static void _onApiKeyWritten(const String &v);
+    static void _onSupabaseUrlWritten(const String &v);
+    static void _onClientConnected();
+    static void _onClientDisconnected();
     /// @endcond
 
 private:
@@ -68,9 +71,9 @@ private:
     static String deviceId_;
     static String apiKey_;
     static String supabaseUrl_;
-    static bool   ssidSet_;
-    static bool   passwordSet_;
-    static bool   apiKeySet_;
-    static bool   supabaseUrlSet_;
-    static volatile bool reAdvertise_;  ///< set by the BLE disconnect callback
+    static bool ssidSet_;
+    static bool passwordSet_;
+    static bool apiKeySet_;
+    static bool supabaseUrlSet_;
+    static volatile bool reAdvertise_; ///< set by the BLE disconnect callback
 };

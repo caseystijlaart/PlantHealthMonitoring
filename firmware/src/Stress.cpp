@@ -1,3 +1,11 @@
+/**
+ * @file Stress.cpp
+ * @brief Implementation of Stress. Combined plant stress score computed from individual sensor levels.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "Stress.hpp"
 
 float Stress::Score(Level level)

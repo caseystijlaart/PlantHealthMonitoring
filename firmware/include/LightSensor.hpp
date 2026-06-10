@@ -1,7 +1,15 @@
+/**
+ * @file LightSensor.hpp
+ * @brief Analog light sensor driver (percentage of full-scale ADC).
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #pragma once
 
 /**
- * @brief A class for managing file storage operations.
+ * @brief Reads an analog light sensor and reports brightness as a percentage.
  */
 class LightSensor
 {

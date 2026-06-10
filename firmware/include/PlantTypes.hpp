@@ -1,8 +1,11 @@
 /**
  * @file PlantTypes.hpp
- * @brief Core data types shared across the PlantHealthMonitor firmware.
+ * @brief Shared data types: sensor snapshots, ML results, recommendations, and plant profiles.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
  */
-
 #pragma once
 
 #include <array>

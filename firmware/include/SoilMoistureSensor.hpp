@@ -1,8 +1,11 @@
 /**
  * @file SoilMoistureSensor.hpp
- * @brief Capacitive soil moisture sensor driver.
+ * @brief Capacitive soil moisture sensor driver with dry/wet calibration.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
  */
-
 #pragma once
 
 /**
@@ -11,7 +14,8 @@
  *
  * ADC readings are mapped linearly between the dry and wet calibration points.
  */
-class SoilMoistureSensor {
+class SoilMoistureSensor
+{
 public:
     /**
      * @brief Constructs the sensor with its GPIO pin and calibration bounds.
@@ -28,7 +32,7 @@ public:
     float ReadPercent() const;
 
 private:
-    int   pin_;
+    int pin_;
     float adcDry_;
     float adcWet_;
 };

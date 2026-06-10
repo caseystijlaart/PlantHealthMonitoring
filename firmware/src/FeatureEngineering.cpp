@@ -1,3 +1,11 @@
+/**
+ * @file FeatureEngineering.cpp
+ * @brief Implementation of FeatureEngineering. Builds the 13-feature ML input vector from the sensor history.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "FeatureEngineering.hpp"
 
 #include <cmath>

@@ -1,3 +1,11 @@
+/**
+ * @file MonitoringSystem.cpp
+ * @brief Implementation of MonitoringSystem. Top-level monitoring system orchestrating sensors, ML, and recommendations.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "MonitoringSystem.hpp"
 #include "CloudLogger.hpp"
 
@@ -42,7 +50,6 @@ MonitoringCycleResult MonitoringSystem::RunCycleDetailed()
     const unsigned long elapsedMs = millis() - startMillis_;
     snapshot.unixTime = startUnixTime_ + static_cast<std::int64_t>(elapsedMs / 1000UL);
 
-    // Skip cycle if soil sensor read is invalid (disconnected / shorted)
     if (snapshot.soilMoisturePct < 0.0f)
     {
         Log.println("[MonitoringSystem] Soil sensor returned invalid reading — skipping cycle");

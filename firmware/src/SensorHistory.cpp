@@ -1,3 +1,11 @@
+/**
+ * @file SensorHistory.cpp
+ * @brief Implementation of SensorHistory. Fixed-capacity ring buffer of sensor snapshots.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "SensorHistory.hpp"
 
 #include <stdexcept>

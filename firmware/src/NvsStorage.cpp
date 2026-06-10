@@ -1,3 +1,11 @@
+/**
+ * @file NvsStorage.cpp
+ * @brief Implementation of NvsStorage. Thin wrapper around the Arduino Preferences (NVS) library.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "NvsStorage.hpp"
 
 #include <Preferences.h>

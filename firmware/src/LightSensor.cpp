@@ -1,3 +1,11 @@
+/**
+ * @file LightSensor.cpp
+ * @brief Implementation of LightSensor. Analog light sensor driver (percentage of full-scale ADC).
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "LightSensor.hpp"
 
 #include <Arduino.h>

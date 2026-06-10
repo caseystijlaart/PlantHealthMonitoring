@@ -1,3 +1,11 @@
+/**
+ * @file MLLayer.cpp
+ * @brief Implementation of MLLayer. On-device ML inference layer producing the plant health risk classification.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "MLLayer.hpp"
 
 #include <algorithm>

@@ -1,3 +1,11 @@
+/**
+ * @file CloudService.cpp
+ * @brief Implementation of CloudService. Supabase REST client for the devices, plant_settings, plant_readings, and model_metrics tables.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "CloudService.hpp"
 #include "CloudLogger.hpp"
 
@@ -12,8 +20,6 @@ void CloudService::SetConfig(const String &supabaseBase, const String &apiKey)
     base_    = supabaseBase;
     apiKey_  = apiKey;
 }
-
-// ── Private HTTP helpers ──────────────────────────────────────────────────────
 
 void CloudService::AddAuth(HTTPClient &https)
 {
@@ -85,8 +91,6 @@ bool CloudService::Patch(const String &url, const String &json)
     https.end();
     return code >= 200 && code < 300;
 }
-
-// ── Public cloud operations ───────────────────────────────────────────────────
 
 void CloudService::RegisterDevice(const String &deviceId, const String &deviceName, std::int64_t nowUnix)
 {
