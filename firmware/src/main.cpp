@@ -16,40 +16,44 @@
 #include "CloudService.hpp"
 #include "CloudLogger.hpp"
 #include "Certs.hpp"
+#include "ModelExport.hpp"
 
 /** File paths */
 static constexpr const char *kHistoryFile = "/sensor_history.csv";
 
 /** Timing constants */
-constexpr unsigned long kIntervalMs      = 1000UL * 60UL * 60UL * 3UL; ///< 3-hour monitoring cycle.
-constexpr unsigned long kCommandCheckMs  = 5000UL;                       ///< Command poll interval (5 s).
-constexpr std::size_t   kHistorySize     = 56;
-constexpr uint8_t       kMaxNoPlantTicks = 30;
+constexpr unsigned long kIntervalMs = 1000UL * 60UL * 60UL * 3UL; ///< 3-hour monitoring cycle.
+constexpr unsigned long kCommandCheckMs = 5000UL;                 ///< Command poll interval (5 s).
+constexpr std::size_t kHistorySize = 56;
+constexpr uint8_t kMaxNoPlantTicks = 30;
+
+/** ML model generation baked into this firmware (stamped by retrain_from_logs.py). */
+constexpr const char *kModelVersion = modelexport::kModelVersion;
 
 /** Subsystems */
 SoilMoistureSensor soilSensor(34, 3500.0f, 1450.0f);
 TempHumiditySensor dhtSensor(4, 22);
-LightSensor        lightSensor(35);
-MLLayer            mlLayer(MLBackend::TINYML_TFLM);
+LightSensor lightSensor(35);
+MLLayer mlLayer(MLBackend::TINYML_TFLM);
 RecommendationEngine recEngine;
 MonitoringSystem monitoringSystem(soilSensor, dhtSensor, lightSensor,
                                   mlLayer, recEngine,
                                   PlantRuleProfile{}, kHistorySize);
-TimeService        timeService;
+TimeService timeService;
 FileStorageService fileStorage(timeService);
-WiFiCommunication  wifi;
-CloudService       cloud;
+WiFiCommunication wifi;
+CloudService cloud;
 
 /** Global state */
-String  gDeviceId;
-String  gPlantLabel;
-String  gDeviceName;
+String gDeviceId;
+String gPlantLabel;
+String gDeviceName;
 
-unsigned long lastRun         = 0;
+unsigned long lastRun = 0;
 unsigned long lastCommandCheck = 0;
-uint8_t       currentVersion  = 0;
-uint8_t       gNoPlantCount   = 0;
-bool          gJustProvisioned = false;
+uint8_t currentVersion = 0;
+uint8_t gNoPlantCount = 0;
+bool gJustProvisioned = false;
 
 /** helper functions */
 static String DeriveDeviceName()
@@ -90,12 +94,12 @@ static void RunMonitoringCycle()
 
     const std::int64_t nowUnix = timeService.GetCurrentUnixTimeUtc();
     const auto &snap = result.snapshot;
-    const auto &rec  = result.recommendation;
+    const auto &rec = result.recommendation;
 
     // plant_readings is plant-scoped: the app queries/subscribes by plant_label
     // and never reads device_id from this table, and device_id is volatile
     // (regenerated on re-provision), so it is intentionally left out here.
-    char json[512];
+    char json[640];
     snprintf(json, sizeof(json),
              "{\"request_id\":%lld,"
              "\"plant_label\":\"%s\","
@@ -104,16 +108,20 @@ static void RunMonitoringCycle()
              "\"action_water\":%s,\"action_reduce_temp\":%s,"
              "\"action_increase_light\":%s,"
              "\"recommendation_summary\":\"%s\","
-             "\"risk_class\":%d}",
+             "\"risk_class\":%d,"
+             "\"confidence\":%.3f,"
+             "\"model_version\":\"%s\"}",
              static_cast<long long>(nowUnix),
              gPlantLabel.c_str(),
              snap.soilMoisturePct, snap.temperatureC,
-             snap.humidityPct,     snap.lightLevelPct,
-             rec.water        ? "true" : "false",
-             rec.reduceTemp   ? "true" : "false",
+             snap.humidityPct, snap.lightLevelPct,
+             rec.water ? "true" : "false",
+             rec.reduceTemp ? "true" : "false",
              rec.increaseLight ? "true" : "false",
              rec.summary,
-             static_cast<int>(result.mlResult.risk));
+             static_cast<int>(result.mlResult.risk),
+             result.mlResult.confidence,
+             kModelVersion);
 
     cloud.SendReading(json);
 }
@@ -130,12 +138,12 @@ static void RunProvisioningMode()
     {
         delay(100);
         yield();
-        ProvisioningService::maintainAdvertising();  // re-advertise if a setup was cancelled
+        ProvisioningService::maintainAdvertising(); // re-advertise if a setup was cancelled
     }
 
-    const String ssid        = ProvisioningService::getSsid();
-    const String password    = ProvisioningService::getPassword();
-    const String apiKey      = ProvisioningService::getApiKey();
+    const String ssid = ProvisioningService::getSsid();
+    const String password = ProvisioningService::getPassword();
+    const String apiKey = ProvisioningService::getApiKey();
     const String supabaseUrl = ProvisioningService::getSupabaseUrl();
 
     Log.println(F("[Prov] Credentials received — stopping BLE"));
@@ -176,7 +184,7 @@ void setup()
     Serial.begin(115200);
     delay(200);
 
-    gDeviceId   = NvsStorage::readString("device_id");
+    gDeviceId = NvsStorage::readString("device_id");
     gDeviceName = DeriveDeviceName();
     Log.printf("[Init] Device name: %s\n", gDeviceName.c_str());
 
@@ -215,6 +223,7 @@ void setup()
         if (nowUnix > 0)
             monitoringSystem.SetStartUnixTime(nowUnix);
         cloud.UpdateLastSeen(gDeviceId, nowUnix);
+        cloud.ReportModelVersion(gDeviceId, kModelVersion);
     }
 
     if (gPlantLabel.isEmpty() && !gDeviceId.isEmpty())
@@ -230,9 +239,9 @@ void setup()
 
     PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
     cloud.FetchProfileSettings(gPlantLabel, profile, currentVersion, currentVersion);
-    strncpy(profile.plantName,  gPlantLabel.c_str(),  sizeof(profile.plantName)  - 1);
-    strncpy(profile.deviceId,   gDeviceId.c_str(),    sizeof(profile.deviceId)   - 1);
-    strncpy(profile.deviceName, gDeviceName.c_str(),  sizeof(profile.deviceName) - 1);
+    strncpy(profile.plantName, gPlantLabel.c_str(), sizeof(profile.plantName) - 1);
+    strncpy(profile.deviceId, gDeviceId.c_str(), sizeof(profile.deviceId) - 1);
+    strncpy(profile.deviceName, gDeviceName.c_str(), sizeof(profile.deviceName) - 1);
     monitoringSystem.SetPlantProfile(profile);
 
     std::size_t existingEntries = 0;
@@ -246,7 +255,9 @@ void setup()
     if (!monitoringSystem.Init())
     {
         Log.println(F("[Init] Monitoring system failed to initialise"));
-        while (true) {}
+        while (true)
+        {
+        }
     }
 
     Log.println(F("[Init] Ready"));
@@ -319,8 +330,6 @@ void loop()
             cloud.UpdateLastSeen(gDeviceId, timeService.GetCurrentUnixTimeUtc());
             lastRun = now;
         }
-
-        // Ship any log lines accumulated since the last poll.
         Log.uploadPending(gDeviceId, gDeviceName);
     }
 
