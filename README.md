@@ -97,6 +97,12 @@ datasets/          Synthetic training data (MIT licence)
 
 ---
 
+## Releases
+
+Pre-built binaries (Android `.apk`, iOS `.ipa`, Windows `.msix`/`.zip`, and ESP32 firmware `.bin`) are published on the [GitHub Releases page](https://github.com/caseystijlaart/PlantHealthMonitoring/releases) — latest: [v1.2](https://github.com/caseystijlaart/PlantHealthMonitoring/releases/tag/v1.2). iOS sideloading instructions are in [docs/manual/ios-sideloading.adoc](docs/manual/ios-sideloading.adoc).
+
+---
+
 ## Database setup
 
 Run `supabase/migrations.sql` in the Supabase SQL editor in order. The migrations:
