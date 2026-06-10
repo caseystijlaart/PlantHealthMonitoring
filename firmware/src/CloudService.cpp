@@ -252,6 +252,13 @@ void CloudService::SendReading(const char *json)
         Log.println(F("[Cloud] Upload failed"));
 }
 
+void CloudService::SendModelMetrics(const char *json)
+{
+    const String url = base_ + kMetricsEndpoint;
+    if (!Post(url, json))
+        Log.println(F("[Cloud] Metrics upload failed"));
+}
+
 bool CloudService::CheckTriggerReset(const String &deviceId)
 {
     if (deviceId.isEmpty() || WiFi.status() != WL_CONNECTED)

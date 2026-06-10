@@ -99,7 +99,7 @@ static void RunMonitoringCycle()
     // plant_readings is plant-scoped: the app queries/subscribes by plant_label
     // and never reads device_id from this table, and device_id is volatile
     // (regenerated on re-provision), so it is intentionally left out here.
-    char json[640];
+    char json[512];
     snprintf(json, sizeof(json),
              "{\"request_id\":%lld,"
              "\"plant_label\":\"%s\","
@@ -108,9 +108,7 @@ static void RunMonitoringCycle()
              "\"action_water\":%s,\"action_reduce_temp\":%s,"
              "\"action_increase_light\":%s,"
              "\"recommendation_summary\":\"%s\","
-             "\"risk_class\":%d,"
-             "\"confidence\":%.3f,"
-             "\"model_version\":\"%s\"}",
+             "\"risk_class\":%d}",
              static_cast<long long>(nowUnix),
              gPlantLabel.c_str(),
              snap.soilMoisturePct, snap.temperatureC,
@@ -119,11 +117,31 @@ static void RunMonitoringCycle()
              rec.reduceTemp ? "true" : "false",
              rec.increaseLight ? "true" : "false",
              rec.summary,
-             static_cast<int>(result.mlResult.risk),
-             result.mlResult.confidence,
-             kModelVersion);
+             static_cast<int>(result.mlResult.risk));
 
     cloud.SendReading(json);
+
+    // Model-performance telemetry goes to its own table (model_metrics) to
+    // keep plant_readings lean. device_name is MAC-derived and stable across
+    // re-provisioning, giving the dev dashboard exact per-device attribution.
+    char metrics[320];
+    snprintf(metrics, sizeof(metrics),
+             "{\"request_id\":%lld,"
+             "\"plant_label\":\"%s\","
+             "\"device_name\":\"%s\","
+             "\"model_version\":\"%s\","
+             "\"risk_class\":%d,"
+             "\"confidence\":%.3f,"
+             "\"predicted_water_min\":%.1f}",
+             static_cast<long long>(nowUnix),
+             gPlantLabel.c_str(),
+             gDeviceName.c_str(),
+             kModelVersion,
+             static_cast<int>(result.mlResult.risk),
+             result.mlResult.confidence,
+             rec.predictedMinutesToWater);
+
+    cloud.SendModelMetrics(metrics);
 }
 
 /** Provisioning mode */

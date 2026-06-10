@@ -51,6 +51,9 @@ public:
     /** @brief POSTs a JSON reading payload to plant_readings. */
     void SendReading(const char *json);
 
+    /** @brief POSTs a JSON model-performance payload to model_metrics. */
+    void SendModelMetrics(const char *json);
+
     /**
      * @brief Polls trigger_reset; returns true if the flag was set.
      * Does NOT perform the reset itself.
@@ -74,6 +77,7 @@ private:
     String apiKey_;
 
     static constexpr const char *kReadingsEndpoint = "/plant_readings";
+    static constexpr const char *kMetricsEndpoint  = "/model_metrics";
     static constexpr const char *kDevicesEndpoint  = "/devices";
     static constexpr const char *kSettingsEndpoint = "/plant_settings";
 };

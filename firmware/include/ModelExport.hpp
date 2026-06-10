@@ -9,7 +9,7 @@
 namespace modelexport {
 
 // Reported to the cloud so readings can be attributed to a model generation.
-static constexpr const char *kModelVersion = "v2-20260610";
+static constexpr const char *kModelVersion = "v0.2";
 
 // ── Shared scaler (used by both models) ───────────────────────────────────────
 
