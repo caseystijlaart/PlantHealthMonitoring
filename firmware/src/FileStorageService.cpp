@@ -100,7 +100,7 @@ void FileStorageService::WritePaired(const String &ssid,
     File f = LittleFS.open(kPairingFile, "w");
     if (!f)
     {
-        Log.println(F("[FS] Failed to write pairing document"));
+        Log.log("[FS] Failed to write pairing document");
         return;
     }
     f.print("paired\n");
@@ -109,7 +109,7 @@ void FileStorageService::WritePaired(const String &ssid,
     f.print(apiKey);      f.print('\n');
     f.print(supabaseUrl); f.print('\n');
     f.close();
-    Log.println(F("[FS] Pairing document → paired"));
+    Log.log("[FS] Pairing document → paired");
 }
 
 void FileStorageService::WriteUnpaired()
@@ -117,12 +117,12 @@ void FileStorageService::WriteUnpaired()
     File f = LittleFS.open(kPairingFile, "w");
     if (!f)
     {
-        Log.println(F("[FS] Failed to write pairing document"));
+        Log.log("[FS] Failed to write pairing document");
         return;
     }
     f.print("unpaired\n");
     f.close();
-    Log.println(F("[FS] Pairing document → unpaired"));
+    Log.log("[FS] Pairing document → unpaired");
 }
 
 bool FileStorageService::ReadPairing(String &ssidOut,
@@ -134,7 +134,7 @@ bool FileStorageService::ReadPairing(String &ssidOut,
 
     if (!LittleFS.exists(kPairingFile))
     {
-        Log.println(F("[FS] Pairing document not found — creating as unpaired"));
+        Log.log("[FS] Pairing document not found — creating as unpaired");
         WriteUnpaired();
         return false;
     }
@@ -168,7 +168,7 @@ void FileStorageService::ClearHistory(const char *filePath)
     if (LittleFS.exists(filePath))
     {
         LittleFS.remove(filePath);
-        Log.println(F("[FS] Sensor history cleared"));
+        Log.log("[FS] Sensor history cleared");
     }
 }
 
@@ -299,7 +299,7 @@ bool FileStorageService::AppendToHistoryFile(const char *filePath,
                 rewrite.println(l);
             }
             rewrite.close();
-            Log.println(F("[FS] History file trimmed"));
+            Log.log("[FS] History file trimmed");
         }
     }
     return true;

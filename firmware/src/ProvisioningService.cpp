@@ -130,14 +130,14 @@ void ProvisioningService::begin(const char *deviceName, const String &deviceId)
     pAdv->setMinPreferred(0x06);
     BLEDevice::startAdvertising();
 
-    Log.printf("[BLE] Advertising as '%s' — device_id: %s\n", deviceName, deviceId.c_str());
+    Log.logf("[BLE] Advertising as '%s' — device_id: %s", deviceName, deviceId.c_str());
 }
 
 void ProvisioningService::stop()
 {
     BLEDevice::stopAdvertising();
     BLEDevice::deinit(true);
-    Log.println(F("[BLE] Provisioning stopped"));
+    Log.log("[BLE] Provisioning stopped");
 }
 
 void ProvisioningService::maintainAdvertising()
@@ -146,12 +146,12 @@ void ProvisioningService::maintainAdvertising()
     reAdvertise_ = false;
     delay(500);                     
     BLEDevice::startAdvertising();
-    Log.println(F("[BLE] Client disconnected before provisioning — re-advertising"));
+    Log.log("[BLE] Client disconnected before provisioning — re-advertising");
 }
 
 void ProvisioningService::_onClientConnected()
 {
-    Log.println(F("[BLE] Client connected"));
+    Log.log("[BLE] Client connected");
 }
 
 void ProvisioningService::_onClientDisconnected()
@@ -175,26 +175,26 @@ void ProvisioningService::_onSsidWritten(const String &v)
 {
     ssid_    = v;
     ssidSet_ = true;
-    Log.printf("[BLE] SSID received (%u chars)\n", v.length());
+    Log.logf("[BLE] SSID received (%u chars)", v.length());
 }
 
 void ProvisioningService::_onPasswordWritten(const String &v)
 {
     password_    = v;
     passwordSet_ = true;
-    Log.println(F("[BLE] Password received"));
+    Log.log("[BLE] Password received");
 }
 
 void ProvisioningService::_onApiKeyWritten(const String &v)
 {
     apiKey_    = v;
     apiKeySet_ = true;
-    Log.println(F("[BLE] API key received"));
+    Log.log("[BLE] API key received");
 }
 
 void ProvisioningService::_onSupabaseUrlWritten(const String &v)
 {
     supabaseUrl_    = v;
     supabaseUrlSet_ = true;
-    Log.printf("[BLE] Supabase URL received (%u chars)\n", v.length());
+    Log.logf("[BLE] Supabase URL received (%u chars)", v.length());
 }

@@ -49,7 +49,7 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
 {
     if (WiFi.status() != WL_CONNECTED)
     {
-        Log.println("Cannot sync time: WiFi not connected");
+        Log.log("Cannot sync time: WiFi not connected");
         synced_ = false;
         return false;
     }
@@ -66,8 +66,7 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
             char buffer[32];
             strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeInfo);
 
-            Log.print("NTP time synced. Local time: ");
-            Log.println(buffer);
+            Log.logf("NTP time synced. Local time: %s", buffer);
 
             synced_ = true;
             return true;
@@ -76,7 +75,7 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
         delay(500);
     }
 
-    Log.println("NTP time sync failed");
+    Log.log("NTP time sync failed");
     synced_ = false;
     return false;
 }

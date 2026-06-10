@@ -1,7 +1,7 @@
 /**
  * @file CloudLogger.cpp
- * @brief Implementation of CloudLogger. Tee logger that mirrors Serial output and batch-uploads log lines to the cloud logs table.
- * @version 1.1.0
+ * @brief Implementation of CloudLogger. Line-based logger that queues log messages and batch-uploads them to the cloud logs table.
+ * @version 1.2.0
  * @date 2026-06-10
  * @author C. Stijlaart
  * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
@@ -12,37 +12,36 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
+#include <cstdarg>
+#include <cstdio>
+
 CloudLogger Log;
 
-size_t CloudLogger::write(uint8_t c)
+void CloudLogger::log(const String &message)
 {
-    if (c == '\r')
-        return 1;
-    if (c == '\n')
-    {
-        finishLine();
-        return 1;
-    }
-    if (line_.length() < kMaxLine)
-        line_ += static_cast<char>(c);
-    return 1;
+    enqueue(message);
 }
 
-size_t CloudLogger::write(const uint8_t *buffer, size_t size)
+void CloudLogger::logf(const char *format, ...)
 {
-    for (size_t i = 0; i < size; ++i)
-        write(buffer[i]);
-    return size;
+    char buf[kMaxLine + 1];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buf, sizeof(buf), format, args);
+    va_end(args);
+    enqueue(String(buf));
 }
 
-void CloudLogger::finishLine()
+void CloudLogger::enqueue(const String &message)
 {
-    if (line_.isEmpty())
+    if (message.isEmpty())
         return;
+    String line = message;
+    if (line.length() > kMaxLine)
+        line = line.substring(0, kMaxLine);
     if (queue_.size() >= kMaxQueued)
         queue_.erase(queue_.begin());
-    queue_.push_back({classify(line_), line_});
-    line_ = "";
+    queue_.push_back({classify(line), line});
 }
 
 const char *CloudLogger::classify(const String &line)

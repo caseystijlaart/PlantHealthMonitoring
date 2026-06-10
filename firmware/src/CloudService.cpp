@@ -43,7 +43,7 @@ bool CloudService::Post(const String &url, const String &json)
     https.addHeader(F("Prefer"), F("return=minimal"));
 
     const int code = https.POST(json);
-    Log.printf("[HTTP] POST %s → %d\n", url.c_str(), code);
+    Log.logf("[HTTP] POST %s → %d", url.c_str(), code);
     https.end();
     return code >= 200 && code < 300;
 }
@@ -87,7 +87,7 @@ bool CloudService::Patch(const String &url, const String &json)
     https.addHeader(F("Prefer"), F("return=minimal"));
 
     const int code = https.sendRequest("PATCH", json);
-    Log.printf("[HTTP] PATCH %d\n", code);
+    Log.logf("[HTTP] PATCH %d", code);
     https.end();
     return code >= 200 && code < 300;
 }
@@ -131,7 +131,7 @@ void CloudService::RegisterDevice(const String &deviceId, const String &deviceNa
     https.addHeader(F("Prefer"), F("resolution=merge-duplicates,return=minimal"));
 
     const int code = https.POST(json);
-    Log.printf("[Cloud] Device registration → %d\n", code);
+    Log.logf("[Cloud] Device registration → %d", code);
     https.end();
 }
 
@@ -149,7 +149,7 @@ void CloudService::DeleteDevice(const String &deviceId)
 
     AddAuth(https);
     const int code = https.sendRequest("DELETE");
-    Log.printf("[Cloud] Device self-delete → %d\n", code);
+    Log.logf("[Cloud] Device self-delete → %d", code);
     https.end();
 }
 
@@ -184,7 +184,7 @@ bool CloudService::FetchPlantLabel(const String &deviceId, String &outLabel)
     const String body = Get(url);
     if (body.isEmpty() || body == "[]")
     {
-        Log.println(F("[Cloud] No plant_settings row for this device"));
+        Log.log("[Cloud] No plant_settings row for this device");
         return false;
     }
 
@@ -198,7 +198,7 @@ bool CloudService::FetchPlantLabel(const String &deviceId, String &outLabel)
         return false;
 
     outLabel = body.substring(start, end);
-    Log.printf("[Cloud] Plant label: %s\n", outLabel.c_str());
+    Log.logf("[Cloud] Plant label: %s", outLabel.c_str());
     return true;
 }
 
@@ -236,7 +236,7 @@ bool CloudService::FetchProfileSettings(const String &plantLabel,
 
     if (latestVersion == currentVersion)
     {
-        Log.println(F("[Cloud] Profile up to date"));
+        Log.log("[Cloud] Profile up to date");
         return true;
     }
 
@@ -245,7 +245,7 @@ bool CloudService::FetchProfileSettings(const String &plantLabel,
     outProfile.preferences.soilMoisture = ParsePreference(payload, "soil_preference");
     outProfile.preferences.temperature  = ParsePreference(payload, "temperature_preference");
     outVersion = static_cast<uint8_t>(latestVersion);
-    Log.println(F("[Cloud] Profile updated"));
+    Log.log("[Cloud] Profile updated");
     return true;
 }
 
@@ -253,14 +253,14 @@ void CloudService::SendReading(const char *json)
 {
     const String url = base_ + kReadingsEndpoint;
     if (!Post(url, json))
-        Log.println(F("[Cloud] Upload failed"));
+        Log.log("[Cloud] Upload failed");
 }
 
 void CloudService::SendModelMetrics(const char *json)
 {
     const String url = base_ + kMetricsEndpoint;
     if (!Post(url, json))
-        Log.println(F("[Cloud] Metrics upload failed"));
+        Log.log("[Cloud] Metrics upload failed");
 }
 
 bool CloudService::CheckTriggerReset(const String &deviceId)
@@ -289,6 +289,6 @@ bool CloudService::CheckTriggerMeasurement(const String &deviceId)
 
     const String patchUrl = base_ + kDevicesEndpoint + "?device_id=eq." + deviceId;
     Patch(patchUrl, "{\"trigger_measurement\":false}");
-    Log.println(F("[Cloud] trigger_measurement — running immediate cycle"));
+    Log.log("[Cloud] trigger_measurement — running immediate cycle");
     return true;
 }

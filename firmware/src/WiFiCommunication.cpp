@@ -23,11 +23,11 @@ void WiFiCommunication::EnsureConnected()
         return;
     if (!HasCredentials())
     {
-        Log.println(F("[WiFi] No credentials — skipping"));
+        Log.log("[WiFi] No credentials — skipping");
         return;
     }
 
-    Log.printf("[WiFi] Connecting to %s\n", ssid_.c_str());
+    Log.logf("[WiFi] Connecting to %s", ssid_.c_str());
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid_.c_str(), password_.c_str());
 
@@ -38,9 +38,9 @@ void WiFiCommunication::EnsureConnected()
     }
 
     if (WiFi.status() == WL_CONNECTED)
-        Log.printf("[WiFi] Connected — IP: %s\n", WiFi.localIP().toString().c_str());
+        Log.logf("[WiFi] Connected — IP: %s", WiFi.localIP().toString().c_str());
     else
-        Log.println(F("[WiFi] Connection timed out"));
+        Log.log("[WiFi] Connection timed out");
 }
 
 bool WiFiCommunication::IsConnected() const

@@ -83,7 +83,7 @@ static void RunMonitoringCycle()
 
     if (gPlantLabel.isEmpty())
     {
-        Log.println(F("[Cycle] No plant label — skipping upload"));
+        Log.log("[Cycle] No plant label — skipping upload");
         return;
     }
 
@@ -135,7 +135,7 @@ static void RunMonitoringCycle()
 
 static void RunProvisioningMode()
 {
-    Log.println(F("[Prov] Entering BLE provisioning mode"));
+    Log.log("[Prov] Entering BLE provisioning mode");
 
     gDeviceId = ProvisioningService::getOrCreateDeviceId();
     ProvisioningService::begin(gDeviceName.c_str(), gDeviceId);
@@ -152,7 +152,7 @@ static void RunProvisioningMode()
     const String apiKey = ProvisioningService::getApiKey();
     const String supabaseUrl = ProvisioningService::getSupabaseUrl();
 
-    Log.println(F("[Prov] Credentials received — stopping BLE"));
+    Log.log("[Prov] Credentials received — stopping BLE");
     ProvisioningService::stop();
 
     wifi.SetCredentials(ssid, password);
@@ -160,7 +160,7 @@ static void RunProvisioningMode()
 
     if (!wifi.IsConnected())
     {
-        Log.println(F("[Prov] WiFi failed — rebooting"));
+        Log.log("[Prov] WiFi failed — rebooting");
         NvsStorage::clearAll();
         delay(2000);
         ESP.restart();
@@ -179,27 +179,27 @@ static void RunProvisioningMode()
     fileStorage.WritePaired(ssid, password, apiKey, supabaseUrl);
 
     gJustProvisioned = true;
-    Log.println(F("[Prov] Provisioning complete"));
+    Log.log("[Prov] Provisioning complete");
 }
 
 void setup()
 {
     gDeviceId = NvsStorage::readString("device_id");
     gDeviceName = DeriveDeviceName();
-    Log.printf("[Init] Device name: %s\n", gDeviceName.c_str());
+    Log.logf("[Init] Device name: %s", gDeviceName.c_str());
 
     String ssid, password, apiKey, supabaseUrl;
     const bool paired = fileStorage.ReadPairing(ssid, password, apiKey, supabaseUrl);
 
     if (!paired)
     {
-        Log.println(F("[Init] Not paired — entering BLE provisioning mode"));
+        Log.log("[Init] Not paired — entering BLE provisioning mode");
         RunProvisioningMode();
         fileStorage.ReadPairing(ssid, password, apiKey, supabaseUrl);
     }
     else
     {
-        Log.printf("[Init] Paired — device_id: %s\n", gDeviceId.c_str());
+        Log.logf("[Init] Paired — device_id: %s", gDeviceId.c_str());
     }
 
     String base = supabaseUrl;
@@ -228,7 +228,7 @@ void setup()
 
         if (gPlantLabel.isEmpty() && !gJustProvisioned)
         {
-            Log.println(F("[Init] Paired but no plant_settings — resetting"));
+            Log.log("[Init] Paired but no plant_settings — resetting");
             PerformFactoryReset();
         }
     }
@@ -245,18 +245,18 @@ void setup()
     if (!snapshots.empty())
     {
         monitoringSystem.LoadHistoricalSnapshots(snapshots);
-        Log.printf("[Init] Restored %u snapshots\n", static_cast<unsigned>(snapshots.size()));
+        Log.logf("[Init] Restored %u snapshots", static_cast<unsigned>(snapshots.size()));
     }
 
     if (!monitoringSystem.Init())
     {
-        Log.println(F("[Init] Monitoring system failed to initialise"));
+        Log.log("[Init] Monitoring system failed to initialise");
         while (true)
         {
         }
     }
 
-    Log.println(F("[Init] Ready"));
+    Log.log("[Init] Ready");
 
     if (!gPlantLabel.isEmpty())
     {
@@ -265,7 +265,7 @@ void setup()
     }
     else
     {
-        Log.println(F("[Init] Waiting for plant setup in app"));
+        Log.log("[Init] Waiting for plant setup in app");
     }
 
     lastRun = lastCommandCheck = millis();
@@ -288,7 +288,7 @@ void loop()
         {
             if (cloud.FetchPlantLabel(gDeviceId, gPlantLabel))
             {
-                Log.println(F("[Loop] Plant label acquired — running first cycle"));
+                Log.log("[Loop] Plant label acquired — running first cycle");
                 PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
                 cloud.FetchProfileSettings(gPlantLabel, profile, currentVersion, currentVersion);
                 strncpy(profile.plantName, gPlantLabel.c_str(), sizeof(profile.plantName) - 1);
@@ -302,10 +302,10 @@ void loop()
             {
                 if (++gNoPlantCount >= kMaxNoPlantTicks)
                 {
-                    Log.println(F("[Loop] Grace period expired — resetting"));
+                    Log.log("[Loop] Grace period expired — resetting");
                     PerformFactoryReset();
                 }
-                Log.printf("[Loop] No plant label (%u/%u)\n", gNoPlantCount, kMaxNoPlantTicks);
+                Log.logf("[Loop] No plant label (%u/%u)", gNoPlantCount, kMaxNoPlantTicks);
             }
         }
         else if (!gPlantLabel.isEmpty())
@@ -315,7 +315,7 @@ void loop()
 
         if (cloud.CheckTriggerReset(gDeviceId))
         {
-            Log.println(F("[Cloud] trigger_reset — performing factory reset"));
+            Log.log("[Cloud] trigger_reset — performing factory reset");
             PerformFactoryReset();
         }
 

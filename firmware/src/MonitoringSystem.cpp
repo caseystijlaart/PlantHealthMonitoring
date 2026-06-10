@@ -52,7 +52,7 @@ MonitoringCycleResult MonitoringSystem::RunCycleDetailed()
 
     if (snapshot.soilMoisturePct < 0.0f)
     {
-        Log.println("[MonitoringSystem] Soil sensor returned invalid reading — skipping cycle");
+        Log.log("[MonitoringSystem] Soil sensor returned invalid reading — skipping cycle");
         return MonitoringCycleResult{};
     }
 
