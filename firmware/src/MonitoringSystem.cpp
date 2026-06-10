@@ -1,10 +1,17 @@
+/**
+ * @file MonitoringSystem.cpp
+ * @brief Implementation of MonitoringSystem. Top-level monitoring system orchestrating sensors, ML, and recommendations.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "MonitoringSystem.hpp"
+#include "CloudLogger.hpp"
 
 #include <Arduino.h>
 
 #include "FeatureEngineering.hpp"
-
-namespace pof02 {
 
 MonitoringSystem::MonitoringSystem(SoilMoistureSensor soilSensor,
                                    TempHumiditySensor tempHumiditySensor,
@@ -24,12 +31,14 @@ MonitoringSystem::MonitoringSystem(SoilMoistureSensor soilSensor,
       startUnixTime_(startUnixTime),
       startMillis_(0) {}
 
-bool MonitoringSystem::Init() {
+bool MonitoringSystem::Init()
+{
     startMillis_ = millis();
     return tempHumiditySensor_.Init();
 }
 
-MonitoringCycleResult MonitoringSystem::RunCycleDetailed() {
+MonitoringCycleResult MonitoringSystem::RunCycleDetailed()
+{
     const auto [temperature, humidity] = tempHumiditySensor_.Read();
 
     SensorSnapshot snapshot{};
@@ -41,9 +50,9 @@ MonitoringCycleResult MonitoringSystem::RunCycleDetailed() {
     const unsigned long elapsedMs = millis() - startMillis_;
     snapshot.unixTime = startUnixTime_ + static_cast<std::int64_t>(elapsedMs / 1000UL);
 
-    // Skip cycle if soil sensor read is invalid (disconnected / shorted)
-    if (snapshot.soilMoisturePct < 0.0f) {
-        Serial.println("[MonitoringSystem] Soil sensor returned invalid reading — skipping cycle");
+    if (snapshot.soilMoisturePct < 0.0f)
+    {
+        Log.log("[MonitoringSystem] Soil sensor returned invalid reading — skipping cycle");
         return MonitoringCycleResult{};
     }
 
@@ -57,23 +66,26 @@ MonitoringCycleResult MonitoringSystem::RunCycleDetailed() {
     return MonitoringCycleResult{snapshot, features, mlResult, recommendation};
 }
 
-void MonitoringSystem::SetPlantProfile(const PlantRuleProfile& plantProfile) {
+void MonitoringSystem::SetPlantProfile(const PlantRuleProfile &plantProfile)
+{
     plantProfile_ = plantProfile;
 }
 
-const PlantRuleProfile& MonitoringSystem::GetPlantProfile() const {
+const PlantRuleProfile &MonitoringSystem::GetPlantProfile() const
+{
     return plantProfile_;
 }
 
-void MonitoringSystem::LoadHistoricalSnapshots(const std::vector<SensorSnapshot>& snapshots) {
-    for (const auto& snapshot : snapshots) {
+void MonitoringSystem::LoadHistoricalSnapshots(const std::vector<SensorSnapshot> &snapshots)
+{
+    for (const auto &snapshot : snapshots)
+    {
         history_.Add(snapshot);
     }
 }
 
-void MonitoringSystem::SetStartUnixTime(std::int64_t unixTime) {
+void MonitoringSystem::SetStartUnixTime(std::int64_t unixTime)
+{
     startUnixTime_ = unixTime;
     startMillis_ = millis();
 }
-
-} // namespace pof02

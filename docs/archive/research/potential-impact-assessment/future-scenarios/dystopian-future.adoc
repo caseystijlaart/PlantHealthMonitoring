@@ -1,0 +1,20 @@
+= Dystopian Future
+
+When looking into a dystopian future, a future where embedded AI has  severely negatively impacted both the environment and human values, many concerning things could be concluded.
+
+Small systems such as the Smart Desk Plant Monitoring system could become heavily commercialized and over-adopted in everyday life.
+Users have become overly dependent on AI systems, reducing critical engagement with their surroundings and weakening environmental knowledge and practical skills.
+A extreme lack of awareness of their surroundings could lead to a disconnect from nature and a lack of understanding of how their actions impact the environment, which indirectly contributes to environmental degradation and a loss of biodiversity.
+
+Something that could have an even bigger impact is the continuous replacement and adaptation cycle of embedded AI systems.
+In the dystopian future, systems are not designed with long-term use in mind.
+Instead of allowing for long-term use, repairability, upgradability, and sustainability, they are designed to be replaced frequently with newer versions that have minor improvements or changes.
+This has caused a cycle of constant replacements, where users continuously throw out the old and replace it with the new.
+Over time, this leads to a growing throwaway culture and significantly increased electronic waste, a problem that is already severe today, with global e-waste volumes rising each year and recycling rates remaining critically insufficient (Forti et al., 2020).
+
+[quote, Forti et al., The Global E-waste Monitor (2020)]
+____
+A record 53.6 million metric tonnes of electronic waste was generated worldwide in 2019, up 21 per cent in just five years. Only 17.4 per cent of this e-waste was collected and recycled. Gold, silver, copper, platinum and other recoverable materials valued at US $57 billion were mostly dumped or burned rather than being collected for treatment and reuse.
+____
+
+As society becomes unable to keep up with recycling old electronic devices, pollution and resource depletion will become even more severe environmental problems.

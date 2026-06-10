@@ -1,0 +1,25 @@
+= Transformative Perspectives
+
+By most people AI is seen as a software-based tool.
+A tool that can help us learn things, come up with ideas, or even help with writing a letter to a friend.
+Most people are not aware of how much more AI can be than just a software-based tool.
+When starting this semester, I was one of those people. 
+When starting off, I mainly used AI as a tool to help me with writing, brainstorming, and learning about new topics.
+While I already knew that AI could be used in embedded systems, I didn't fully grasp how much it could influence the design and functionality of such systems, and how it could impact human values and interactions with technology.
+
+As an embedded software engineer student, I tend to get stuck in the things that I know, things I know that work.
+While knowing the vital role AI plays within the project, I didn't realize to what extend.
+Until I had different conversations with my peers and consultants.
+They made me aware in what other ways AI could be used, and how it could influence the design of the system, and how it could impact human values and interactions with technology.
+This made me realize that design decisions around how AI can provide feedback to people without actually needing to know what is going on.
+
+For example, when it comes to my personal project, the plant monitoring system, raw values and data are near useless to most people.
+They have no idea what to do with them, and they don't know how to interpret them.
+Taking this aspect and AI's ability to process data and provide feedback, I realized that the system could be designed to provide feedback in a more intuitive way.
+A way that does not require users to have all the deep knowledge about a plant. 
+They see a green light, they know the plant is doing well, they see a red light, they know the plant needs attention.
+Just like with a stop light, red means stop, green means go, and yellow means slow down.
+This is a very intuitive way to communicate information, without the need for a screen or complex dashboard
+
+To put it in perspective, the project made me realize that embedded AI systems may increasingly operate through ambient and context-aware interactions integrated into everyday life, allowing for a bridge to be created between people, technology, and the environment.
+

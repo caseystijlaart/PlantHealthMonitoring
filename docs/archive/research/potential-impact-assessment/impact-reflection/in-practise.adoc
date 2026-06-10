@@ -1,0 +1,29 @@
+= In Practice
+
+At the start of the semester, I approached AI as a technical tool used through machine learning models to process sensor data and classify plant conditions.
+While I was aware of the potential for AI to be integrated into embedded systems, I didn't fully grasp the extent to which it could influence the design and functionality of such systems, and how it could impact human values and interactions with technology.
+So, the initial goal of the project was to create a functional and accessible monitoring system that could help users better understand the conditions of their plants through local AI processing and environmental sensing.
+
+Once the idea was finalized, the project started off with finding and validating suitable datasets for training the machine learning model.
+While there were some datasets available, they were often limited in scope or not perfectly aligned with the specific conditions and sensors used in the project.
+This led to the decision to create a custom dataset based upon an existing dataset with engineered features that were more relevant to the project’s goals.
+Upon initial validation, the model showed promising results, even with minor adjustments to the dataset and features.
+
+Unfortunately, as the project progressed, it was discovered that the model was not as suitable as expected due to its heavy reliance on a single feature.
+This led to a revision of the dataset and the creation of a multi-feature model that could provide more robust and accurate feedback about plant health.
+This process improved understanding of how strongly dataset structure, feature engineering, and model design influence AI behavior and output.
+
+As the project was nearing its original goal, the design evolved further to include an additional prediction model.
+This was decided based upon further discussions and reflections with consultants and peers, which made it clear that providing feedback on the current state of the plant was useful, but being able to predict how the plant may perform in the future could provide even more value to users.
+Not only would this be helpful for users, but it could also help bridge the gap between people and their environment by creating a stronger connection between users and their surroundings.
+This was an aspect that I gradually learned more about throughout the semester.
+So it could be said that over time, the role of AI within the project evolved from simply generating information about plant health and predictions towards acting as a bridge between environmental data and human understanding.
+
+Using AI within an embedded system is valuable on its own, but making that AI meaningful and understandable to people could take it to another level.
+Something that could demonstrate how AI and technology may help people become more connected to their environment and more aware of it, rather than increasingly disconnected from it.
+
+Over time, it became clear that the design of the system evolved from a relatively simple monitoring system into a broader embedded AI concept capable of both monitoring and predictive feedback.
+This development was driven not only by technical development, but also by a growing understanding of how AI could be used in more meaningful and human-centered ways within embedded systems.
+
+The project ultimately highlighted the importance of flexibility and adaptability during the development process.
+Many aspects of the final system emerged through experimentation, reflection, technical limitations, discussions, and unforeseen challenges encountered throughout the semester.

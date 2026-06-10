@@ -1,0 +1,16 @@
+= References
+
+* Alajlan, N. N., & Ibrahim, D. M. (2022). TinyML: Enabling of inference deep learning models on ultra-low-power IoT edge devices for AI applications. _Micromachines_, _13_(6), 851. https://doi.org/10.3390/mi13060851
+* Espinilla, M., Villarreal, V., & McChesney, I. (2019). Ubiquitous computing and ambient intelligence. _Sensors_, _19_(18), 4034. https://doi.org/10.3390/s19184034
+* European Parliament & Council of the European Union. (2016). _General Data Protection Regulation (GDPR)_, Regulation (EU) 2016/679. Official Journal of the European Union. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679
+* Forti, V., Baldé, C. P., Kuehr, R., & Bel, G. (2020). _The Global E-waste Monitor 2020_. United Nations University / United Nations Institute for Training and Research.
+* Gunning, D., & Aha, D. (2019). DARPA's explainable artificial intelligence (XAI) program. _AI Magazine_, _40_(2), 44–58. https://doi.org/10.1609/aimag.v40i2.2850
+* Hu, L., et al. (2025). Human at the center: A framework for human-driven AI development. _AI Magazine_. https://doi.org/10.1002/aaai.70043
+* Mehrabi, N., Morstatter, F., Saxena, N., Lerman, K., & Galstyan, A. (2021). A survey on bias and fairness in machine learning. _ACM Computing Surveys_, _54_(6), 1–35. https://doi.org/10.1145/3457607
+* Radanliev, P., Santos, O., Brandon-Jones, A., & Joinson, A. (2024). Ethics and responsible AI deployment. _Frontiers in Artificial Intelligence_, _7_. https://doi.org/10.3389/frai.2024.1377011
+* Sanchez-Iborra, R., et al. (2022). Intelligent and efficient IoT through the cooperation of TinyML and edge computing. _Informatica_, _33_(4). https://doi.org/10.15388/22-INFOR505
+* Väänänen, K., Sankaran, S., Gutierrez Lopez, M., & Zhang, C. (2021). Respecting human autonomy through human-centered AI. _Frontiers in Artificial Intelligence_, _4_. https://doi.org/10.3389/frai.2021.807566
+* W3C. (2018). _Web Content Accessibility Guidelines (WCAG) 2.1_. World Wide Web Consortium. https://www.w3.org/TR/WCAG21/
+* Weiser, M. (1991). The computer for the 21st century. _Scientific American_, _265_(3), 94–104. https://doi.org/10.1145/329124.329126
+* Weiser, M., & Brown, J. S. (1996). Designing calm technology. _PowerGrid Journal_, _1_(1).
+* Wirtz, B. W., et al. (2025). AI ethics: Integrating transparency, fairness, and privacy in AI development. _Applied Artificial Intelligence_, _39_(1). https://doi.org/10.1080/08839514.2025.2463722

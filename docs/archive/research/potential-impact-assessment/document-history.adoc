@@ -1,0 +1,12 @@
+= Document History
+
+.Document History
+|===
+| Version | Date       | Status | Author        | Description 
+
+| 0.1     | 09-03-2025 | Initial Version | Casey Stijlaart | Initial version 
+| 0.2     | 12-03-2025 | First Version | Casey Stijlaart | Added mitigation strategies and sustainability considerations 
+| 1.0     | 12-03-2026 | Completed First Version | Casey Stijlaart | Restructured to reflect Responsible AI guidelines, future scenarios, and design reflections 
+| 2.0     | 12-06-2026 | Revised Version, 2 | Casey Stijlaart | Updated based on feedback, further reflections, and the bigger technological context 
+| 2.1     | 15-06-2026 | Final Version, 2 | Casey Stijlaart | Finalized document with additional references and minor edits
+|===

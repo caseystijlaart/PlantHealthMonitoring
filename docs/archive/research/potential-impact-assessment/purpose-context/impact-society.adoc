@@ -1,0 +1,10 @@
+= Impact on Society
+The AI-powered Smart Desk Plant Monitoring system aims to reduce the “pain” of plant neglect and unsuccessful plant care, a common challenge for individuals in home and office environments
+By providing timely and personalized recommendations, the system addresses the problem of plant health deterioration due to inconsistent environmental awareness.
+
+I am confident that the system addresses the right problem because the data collected (e.g., soil moisture, light, temperature, and humidity) directly informs actionable care recommendations.
+The system’s design focuses on user empowerment and education, rather than automation, to ensure that users remain engaged and informed about their plants’ needs (Hu et al., 2025).
+The intended societal outcome is improved environmental literacy, reduced plant loss, and increased engagement with small-scale environmental monitoring.
+I aim to avoid outcomes where users over-rely on AI, leading to reduced autonomy or misunderstanding of natural plant care processes (Väänänen et al., 2021).
+
+**Improvements considered:** Implement adaptive recommendation messaging that emphasizes user judgment, integrate reminders to check sensor readings manually, and provide educational content about plant physiology.

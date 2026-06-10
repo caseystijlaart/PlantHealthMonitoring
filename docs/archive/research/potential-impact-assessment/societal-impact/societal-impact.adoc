@@ -1,0 +1,21 @@
+= Societal Impact
+
+:leveloffset: +1
+
+include::privacy.adoc[]
+
+include::data.adoc[]
+
+<<<
+
+include::transparency.adoc[]
+
+include::inclusivity.adoc[]
+    
+include::sustainability.adoc[]
+
+include::hateful-criminal.adoc[]
+
+include::human-values.adoc[]
+
+:leveloffset: -1

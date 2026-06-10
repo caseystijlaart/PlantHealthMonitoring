@@ -1,267 +1,243 @@
+/**
+ * @file main.cpp
+ * @brief PlantHealthMonitor ESP32 firmware — main application entry point.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <HTTPClient.h>
-#include <LittleFS.h>
-#include <ArduinoOTA.h>
+#include <esp_system.h>
 
 #include "MonitoringSystem.hpp"
 #include "FileStorageService.hpp"
 #include "TimeService.hpp"
+#include "NvsStorage.hpp"
+#include "ProvisioningService.hpp"
+#include "WiFiCommunication.hpp"
+#include "CloudService.hpp"
+#include "CloudLogger.hpp"
 #include "Certs.hpp"
+#include "ModelExport.hpp"
 
-#ifndef WIFI_SSID
-#error "WIFI_SSID must be defined in secrets.ini"
-#endif
+static constexpr const char *kHistoryFile = "/sensor_history.csv";
 
-#ifndef WIFI_PASSWORD
-#error "WIFI_PASSWORD must be defined in secrets.ini"
-#endif
+constexpr unsigned long kIntervalMs = 1000UL * 60UL * 60UL * 3UL; ///< 3-hour monitoring cycle.
+constexpr unsigned long kCommandCheckMs = 5000UL;                 ///< Command poll interval (5 s).
+constexpr std::size_t kHistorySize = 56;
+constexpr uint8_t kMaxNoPlantTicks = 30;
 
-#ifndef API_KEY
-#error "API_KEY must be defined in secrets.ini"
-#endif
+constexpr const char *kModelVersion = modelexport::kModelVersion;
 
-#ifndef PLANT_LABEL
-#define PLANT_LABEL "UNSET_PLANT"
-#endif
-
-#ifndef DEVICE_NAME
-#define DEVICE_NAME "UNSET_DEVICE"
-#endif
-
-#ifndef DEVICE_ID
-#define DEVICE_ID 0
-#endif
-
-namespace
-{
-
-const char *const kApiUrl         = "https://yjjpgvsycxlaqubvedoa.supabase.co/rest/v1/plant_readings";
-const char *const kApiUrlSettings = "https://yjjpgvsycxlaqubvedoa.supabase.co/rest/v1/plant_settings"
-                                    "?plant_label=eq." PLANT_LABEL "&select=*&limit=1";
-const char *const kHistoryFile    = "/sensor_history.csv";
-
-constexpr unsigned long kIntervalMs  = 1000UL * 60UL * 60UL * 3UL; // 3 hours
-constexpr std::size_t   kHistorySize = 56;                           // 1 week at 3 h intervals
-
-pof02::SoilMoistureSensor  soilSensor(34, 3500.0f, 1450.0f);
-pof02::TempHumiditySensor  dhtSensor(4, 22);
-pof02::LightSensor         lightSensor(35);
-pof02::MLLayer             mlLayer(pof02::MLBackend::TINYML_TFLM);
-pof02::RecommendationEngine recEngine;
-pof02::MonitoringSystem     monitoringSystem(soilSensor, dhtSensor, lightSensor,
-                                             mlLayer, recEngine,
-                                             pof02::PlantRuleProfile{}, kHistorySize);
-TimeService        timeService;
+SoilMoistureSensor soilSensor(34, 3500.0f, 1450.0f);
+TempHumiditySensor dhtSensor(4, 22);
+LightSensor lightSensor(35);
+MLLayer mlLayer(MLBackend::TINYML_TFLM);
+RecommendationEngine recEngine;
+MonitoringSystem monitoringSystem(soilSensor, dhtSensor, lightSensor,
+                                  mlLayer, recEngine,
+                                  PlantRuleProfile{}, kHistorySize);
+TimeService timeService;
 FileStorageService fileStorage(timeService);
+WiFiCommunication wifi;
+CloudService cloud;
+
+String gDeviceId;
+String gPlantLabel;
+String gDeviceName;
 
 unsigned long lastRun = 0;
-uint8_t       currentVersion = 0; // starts at 0 so first fetch always applies
+unsigned long lastCommandCheck = 0;
+uint8_t currentVersion = 0;
+uint8_t gNoPlantCount = 0;
+bool gJustProvisioned = false;
 
-// ---------------------------------------------------------------------------
-// WiFi helpers
-// ---------------------------------------------------------------------------
-
-void ConnectWifi()
+static String DeriveDeviceName()
 {
-    if (WiFi.status() == WL_CONNECTED)
-        return;
-
-    Serial.print(F("Connecting to WiFi..."));
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-    const unsigned long start = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - start < 30000UL)
-    {
-        delay(500);
-        Serial.print('.');
-    }
-    Serial.println();
-
-    if (WiFi.status() == WL_CONNECTED)
-    {
-        Serial.print(F("WiFi connected. IP: "));
-        Serial.println(WiFi.localIP());
-    }
-    else
-    {
-        Serial.println(F("WiFi connection timed out"));
-    }
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    char name[12];
+    snprintf(name, sizeof(name), "PHM-%02X%02X%02X", mac[3], mac[4], mac[5]);
+    return String(name);
 }
 
-// ---------------------------------------------------------------------------
-// Cloud communication
-// ---------------------------------------------------------------------------
-
-void SendToCloud(const char *json)
+static void PerformFactoryReset()
 {
-    if (WiFi.status() != WL_CONNECTED)
+    Log.uploadPending(gDeviceId, gDeviceName);
+
+    fileStorage.ClearHistory(kHistoryFile);
+    fileStorage.WriteUnpaired();
+    cloud.DeleteDevice(gDeviceId);
+    NvsStorage::clearAll();
+    delay(500);
+    ESP.restart();
+}
+
+static void RunMonitoringCycle()
+{
+    const MonitoringCycleResult result = monitoringSystem.RunCycleDetailed();
+    fileStorage.AppendToHistoryFile(kHistoryFile, result,
+                                    gPlantLabel.c_str(), gDeviceId.c_str(),
+                                    kHistorySize);
+
+    if (gPlantLabel.isEmpty())
     {
-        Serial.println(F("No WiFi, skipping cloud upload"));
+        Log.log("[Cycle] No plant label — skipping upload");
         return;
     }
-
-    WiFiClientSecure client;
-    client.setCACert(kSupabaseRootCA);
-
-    HTTPClient https;
-    if (!https.begin(client, kApiUrl))
-    {
-        Serial.println(F("HTTPS begin failed"));
-        return;
-    }
-
-    https.addHeader(F("Content-Type"),  F("application/json"));
-    https.addHeader(F("apikey"),        API_KEY);
-    https.addHeader(F("Authorization"), "Bearer " API_KEY);
-    https.addHeader(F("Prefer"),        F("return=minimal"));
-
-    const int code = https.POST(json);
-    Serial.print(F("Cloud response: "));
-    Serial.println(code);
-    https.end();
-}
-
-// ---------------------------------------------------------------------------
-// Profile settings
-// ---------------------------------------------------------------------------
-
-pof02::PreferenceBand ParsePreference(const String &payload, const char *key)
-{
-    if (payload.indexOf(String(key) + "\":\"pLow\"") >= 0) return pof02::PreferenceBand::pLow;
-    if (payload.indexOf(String(key) + "\":\"pHigh\"") >= 0) return pof02::PreferenceBand::pHigh;
-    return pof02::PreferenceBand::pMid;
-}
-
-void ApplyProfilePayload(const String &payload)
-{
-    pof02::PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
-    profile.preferences.humidity    = ParsePreference(payload, "humidityPreference");
-    profile.preferences.light       = ParsePreference(payload, "lightPreference");
-    profile.preferences.soilMoisture = ParsePreference(payload, "soilPreference");
-    profile.preferences.temperature = ParsePreference(payload, "temperaturePreference");
-    monitoringSystem.SetPlantProfile(profile);
-}
-
-bool FetchProfileSettings()
-{
-    if (WiFi.status() != WL_CONNECTED)
-        return false;
-
-    WiFiClientSecure client;
-    client.setCACert(kSupabaseRootCA);
-
-    HTTPClient https;
-    if (!https.begin(client, kApiUrlSettings))
-        return false;
-
-    https.addHeader(F("apikey"),        API_KEY);
-    https.addHeader(F("Authorization"), "Bearer " API_KEY);
-
-    const int code = https.GET();
-    if (code <= 0)
-        return false;
-
-    const String payload = https.getString();
-    https.end();
-
-    if (payload.indexOf("\"plant_label\":\"" PLANT_LABEL "\"") < 0)
-    {
-        Serial.println(F("No settings found for this plant label"));
-        return false;
-    }
-
-    int latestVersion = 0;
-    const int vIdx = payload.indexOf("\"version\":");
-    if (vIdx >= 0)
-        latestVersion = payload.substring(vIdx + 10).toInt();
-
-    if (latestVersion == currentVersion)
-    {
-        Serial.println(F("Profile settings up to date"));
-        return true;
-    }
-
-    ApplyProfilePayload(payload);
-    currentVersion = static_cast<uint8_t>(latestVersion);
-    Serial.println(F("Profile settings updated"));
-    return true;
-}
-
-// ---------------------------------------------------------------------------
-// Monitoring cycle
-// ---------------------------------------------------------------------------
-
-void RunMonitoringCycle()
-{
-    const pof02::MonitoringCycleResult result = monitoringSystem.RunCycleDetailed();
-    fileStorage.AppendToHistoryFile(kHistoryFile, result, PLANT_LABEL, DEVICE_ID, kHistorySize);
 
     const std::int64_t nowUnix = timeService.GetCurrentUnixTimeUtc();
     const auto &snap = result.snapshot;
-    const auto &rec  = result.recommendation;
+    const auto &rec = result.recommendation;
 
     char json[512];
     snprintf(json, sizeof(json),
-        "{\"request_id\":%lld,\"plant_label\":\"" PLANT_LABEL "\","
-        "\"device_id\":%d,"
-        "\"soil_moisture_pct\":%.2f,\"temperature_c\":%.2f,"
-        "\"humidity_pct\":%.2f,\"light_level_pct\":%.2f,"
-        "\"action_water\":%s,\"action_reduce_temp\":%s,"
-        "\"action_increase_light\":%s,"
-        "\"recommendation_summary\":\"%s\","
-        "\"risk_class\":%d}",
-        static_cast<long long>(nowUnix),
-        DEVICE_ID,
-        snap.soilMoisturePct, snap.temperatureC,
-        snap.humidityPct, snap.lightLevelPct,
-        rec.water          ? "true" : "false",
-        rec.reduceTemp     ? "true" : "false",
-        rec.increaseLight  ? "true" : "false",
-        rec.summary,
-        static_cast<int>(result.mlResult.risk));
+             "{\"request_id\":%lld,"
+             "\"plant_label\":\"%s\","
+             "\"soil_moisture_pct\":%.2f,\"temperature_c\":%.2f,"
+             "\"humidity_pct\":%.2f,\"light_level_pct\":%.2f,"
+             "\"action_water\":%s,\"action_reduce_temp\":%s,"
+             "\"action_increase_light\":%s,"
+             "\"recommendation_summary\":\"%s\","
+             "\"risk_class\":%d}",
+             static_cast<long long>(nowUnix),
+             gPlantLabel.c_str(),
+             snap.soilMoisturePct, snap.temperatureC,
+             snap.humidityPct, snap.lightLevelPct,
+             rec.water ? "true" : "false",
+             rec.reduceTemp ? "true" : "false",
+             rec.increaseLight ? "true" : "false",
+             rec.summary,
+             static_cast<int>(result.mlResult.risk));
 
-    SendToCloud(json);
+    cloud.SendReading(json);
+
+    char metrics[320];
+    snprintf(metrics, sizeof(metrics),
+             "{\"request_id\":%lld,"
+             "\"plant_label\":\"%s\","
+             "\"device_name\":\"%s\","
+             "\"model_version\":\"%s\","
+             "\"risk_class\":%d,"
+             "\"confidence\":%.3f,"
+             "\"predicted_water_min\":%.1f}",
+             static_cast<long long>(nowUnix),
+             gPlantLabel.c_str(),
+             gDeviceName.c_str(),
+             kModelVersion,
+             static_cast<int>(result.mlResult.risk),
+             result.mlResult.confidence,
+             rec.predictedMinutesToWater);
+
+    cloud.SendModelMetrics(metrics);
 }
 
-} // namespace
+static void RunProvisioningMode()
+{
+    Log.log("[Prov] Entering BLE provisioning mode");
 
-// ---------------------------------------------------------------------------
-// Arduino entry points
-// ---------------------------------------------------------------------------
+    gDeviceId = ProvisioningService::getOrCreateDeviceId();
+    ProvisioningService::begin(gDeviceName.c_str(), gDeviceId);
+
+    while (!ProvisioningService::isProvisioned())
+    {
+        delay(100);
+        yield();
+        ProvisioningService::maintainAdvertising();
+    }
+
+    const String ssid = ProvisioningService::getSsid();
+    const String password = ProvisioningService::getPassword();
+    const String apiKey = ProvisioningService::getApiKey();
+    const String supabaseUrl = ProvisioningService::getSupabaseUrl();
+
+    Log.log("[Prov] Credentials received — stopping BLE");
+    ProvisioningService::stop();
+
+    wifi.SetCredentials(ssid, password);
+    wifi.EnsureConnected();
+
+    if (!wifi.IsConnected())
+    {
+        Log.log("[Prov] WiFi failed — rebooting");
+        NvsStorage::clearAll();
+        delay(2000);
+        ESP.restart();
+        return;
+    }
+    String base = supabaseUrl;
+    if (!base.endsWith("/rest/v1"))
+        base += "/rest/v1";
+
+    cloud.SetConfig(base, apiKey);
+
+    timeService.SyncTimeWithNtp(10000);
+    cloud.RegisterDevice(gDeviceId, gDeviceName, timeService.GetCurrentUnixTimeUtc());
+
+    NvsStorage::writeString("device_id", gDeviceId);
+    fileStorage.WritePaired(ssid, password, apiKey, supabaseUrl);
+
+    gJustProvisioned = true;
+    Log.log("[Prov] Provisioning complete");
+}
 
 void setup()
 {
-    Serial.begin(115200);
-    delay(200);
+    gDeviceId = NvsStorage::readString("device_id");
+    gDeviceName = DeriveDeviceName();
+    Log.logf("[Init] Device name: %s", gDeviceName.c_str());
 
-    LittleFS.begin(true);
+    String ssid, password, apiKey, supabaseUrl;
+    const bool paired = fileStorage.ReadPairing(ssid, password, apiKey, supabaseUrl);
 
-    ConnectWifi();
-
-    if (WiFi.status() == WL_CONNECTED)
+    if (!paired)
     {
-        ArduinoOTA.setHostname(DEVICE_NAME);
-        ArduinoOTA.setPassword(OTA_PASSWORD);
-        ArduinoOTA.begin();
-        Serial.println(F("OTA ready"));
+        Log.log("[Init] Not paired — entering BLE provisioning mode");
+        RunProvisioningMode();
+        fileStorage.ReadPairing(ssid, password, apiKey, supabaseUrl);
+    }
+    else
+    {
+        Log.logf("[Init] Paired — device_id: %s", gDeviceId.c_str());
+    }
 
+    String base = supabaseUrl;
+    if (!base.endsWith("/rest/v1"))
+        base += "/rest/v1";
+    cloud.SetConfig(base, apiKey);
+
+    Log.configure(base, apiKey, kSupabaseRootCA);
+
+    wifi.SetCredentials(ssid, password);
+    wifi.EnsureConnected();
+
+    if (wifi.IsConnected())
+    {
         timeService.SyncTimeWithNtp(10000);
         const std::int64_t nowUnix = timeService.GetCurrentUnixTimeUtc();
         if (nowUnix > 0)
             monitoringSystem.SetStartUnixTime(nowUnix);
+        cloud.UpdateLastSeen(gDeviceId, nowUnix);
+        cloud.ReportModelVersion(gDeviceId, kModelVersion);
     }
 
-    // Load preferences from Supabase; keep whatever is fetched for the rest of setup
-    FetchProfileSettings();
+    if (gPlantLabel.isEmpty() && !gDeviceId.isEmpty())
+    {
+        cloud.FetchPlantLabel(gDeviceId, gPlantLabel);
 
-    // Apply device identity on top of whatever preferences were loaded
-    pof02::PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
-    strncpy(profile.plantName,  PLANT_LABEL,         sizeof(profile.plantName)  - 1);
-    strncpy(profile.deviceName, DEVICE_NAME,          sizeof(profile.deviceName) - 1);
-    snprintf(profile.deviceId,  sizeof(profile.deviceId), "%d", DEVICE_ID);
+        if (gPlantLabel.isEmpty() && !gJustProvisioned)
+        {
+            Log.log("[Init] Paired but no plant_settings — resetting");
+            PerformFactoryReset();
+        }
+    }
+
+    PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
+    cloud.FetchProfileSettings(gPlantLabel, profile, currentVersion, currentVersion);
+    strncpy(profile.plantName, gPlantLabel.c_str(), sizeof(profile.plantName) - 1);
+    strncpy(profile.deviceId, gDeviceId.c_str(), sizeof(profile.deviceId) - 1);
+    strncpy(profile.deviceName, gDeviceName.c_str(), sizeof(profile.deviceName) - 1);
     monitoringSystem.SetPlantProfile(profile);
 
     std::size_t existingEntries = 0;
@@ -269,35 +245,100 @@ void setup()
     if (!snapshots.empty())
     {
         monitoringSystem.LoadHistoricalSnapshots(snapshots);
-        Serial.printf("Restored %u snapshots (%u on file)\n",
-                      static_cast<unsigned>(snapshots.size()),
-                      static_cast<unsigned>(existingEntries));
+        Log.logf("[Init] Restored %u snapshots", static_cast<unsigned>(snapshots.size()));
     }
 
     if (!monitoringSystem.Init())
     {
-        Serial.println(F("Failed to initialise monitoring system"));
-        while (true) {}
+        Log.log("[Init] Monitoring system failed to initialise");
+        while (true)
+        {
+        }
     }
 
-    Serial.println(F("Monitoring system ready"));
-    RunMonitoringCycle();
-    lastRun = millis();
+    Log.log("[Init] Ready");
+
+    if (!gPlantLabel.isEmpty())
+    {
+        RunMonitoringCycle();
+        cloud.UpdateLastSeen(gDeviceId, timeService.GetCurrentUnixTimeUtc());
+    }
+    else
+    {
+        Log.log("[Init] Waiting for plant setup in app");
+    }
+
+    lastRun = lastCommandCheck = millis();
+
+    Log.uploadPending(gDeviceId, gDeviceName);
 }
 
 void loop()
 {
-    ArduinoOTA.handle();
-
     const unsigned long now = millis();
+
+    if (now - lastCommandCheck >= kCommandCheckMs)
+    {
+        lastCommandCheck = now;
+
+        if (!wifi.IsConnected())
+            wifi.EnsureConnected();
+
+        if (gPlantLabel.isEmpty() && !gDeviceId.isEmpty())
+        {
+            if (cloud.FetchPlantLabel(gDeviceId, gPlantLabel))
+            {
+                Log.log("[Loop] Plant label acquired — running first cycle");
+                PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
+                cloud.FetchProfileSettings(gPlantLabel, profile, currentVersion, currentVersion);
+                strncpy(profile.plantName, gPlantLabel.c_str(), sizeof(profile.plantName) - 1);
+                monitoringSystem.SetPlantProfile(profile);
+                RunMonitoringCycle();
+                cloud.UpdateLastSeen(gDeviceId, timeService.GetCurrentUnixTimeUtc());
+                lastRun = now;
+                gNoPlantCount = gJustProvisioned = 0;
+            }
+            else
+            {
+                if (++gNoPlantCount >= kMaxNoPlantTicks)
+                {
+                    Log.log("[Loop] Grace period expired — resetting");
+                    PerformFactoryReset();
+                }
+                Log.logf("[Loop] No plant label (%u/%u)", gNoPlantCount, kMaxNoPlantTicks);
+            }
+        }
+        else if (!gPlantLabel.isEmpty())
+        {
+            gNoPlantCount = gJustProvisioned = 0;
+        }
+
+        if (cloud.CheckTriggerReset(gDeviceId))
+        {
+            Log.log("[Cloud] trigger_reset — performing factory reset");
+            PerformFactoryReset();
+        }
+
+        if (cloud.CheckTriggerMeasurement(gDeviceId))
+        {
+            RunMonitoringCycle();
+            cloud.UpdateLastSeen(gDeviceId, timeService.GetCurrentUnixTimeUtc());
+            lastRun = now;
+        }
+        Log.uploadPending(gDeviceId, gDeviceName);
+    }
+
     if (now - lastRun < kIntervalMs)
         return;
 
     lastRun = now;
+    if (!wifi.IsConnected())
+        wifi.EnsureConnected();
 
-    if (WiFi.status() != WL_CONNECTED)
-        ConnectWifi();
+    PlantRuleProfile profile = monitoringSystem.GetPlantProfile();
+    cloud.FetchProfileSettings(gPlantLabel, profile, currentVersion, currentVersion);
+    monitoringSystem.SetPlantProfile(profile);
 
-    FetchProfileSettings();
     RunMonitoringCycle();
+    cloud.UpdateLastSeen(gDeviceId, timeService.GetCurrentUnixTimeUtc());
 }

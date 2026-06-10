@@ -1,4 +1,13 @@
+/**
+ * @file TimeService.cpp
+ * @brief Implementation of TimeService. NTP time synchronization and timestamp formatting.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "TimeService.hpp"
+#include "CloudLogger.hpp"
 
 #include <WiFi.h>
 
@@ -40,14 +49,13 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
 {
     if (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println("Cannot sync time: WiFi not connected");
+        Log.log("Cannot sync time: WiFi not connected");
         synced_ = false;
         return false;
     }
 
     configTzTime("CET-1CEST,M3.5.0/2,M10.5.0/3", "pool.ntp.org", "time.nist.gov", "time.google.com");
 
-    Serial.println("Syncing time with NTP...");
     struct tm timeInfo{};
     const unsigned long start = millis();
 
@@ -58,18 +66,16 @@ bool TimeService::SyncTimeWithNtp(unsigned long timeoutMs)
             char buffer[32];
             strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeInfo);
 
-            Serial.print("NTP time synced. Local time: ");
-            Serial.println(buffer);
+            Log.logf("NTP time synced. Local time: %s", buffer);
 
             synced_ = true;
             return true;
         }
 
-        Serial.println("Waiting for NTP time...");
         delay(500);
     }
 
-    Serial.println("NTP time sync failed");
+    Log.log("NTP time sync failed");
     synced_ = false;
     return false;
 }

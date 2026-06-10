@@ -1,0 +1,4 @@
+= Hateful and Criminal Actors
+The technology is low-risk for misuse, potential abuse includes misrepresentation of sensor data in shared environments.
+
+**Mitigations:** Security of local devices, firmware validation, and clear disclaimers.

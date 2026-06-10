@@ -1,0 +1,13 @@
+= Domain Understanding
+Currently, plant care relies heavily on personal knowledge, habit, or generic online advice.
+Users vary widely in expertise, environmental constraints, and attention levels.
+Successful outcomes require consistent monitoring and correct interpretation of environmental signals; poor outcomes include plant death or chronic stress.
+Existing solutions (apps, watering reminders, environmental sensors) often fail due to over-reliance on cloud services, lack of context-specific guidance, or poor usability.
+
+**Assumptions:** Users are willing to interact with a local dashboard, interpret suggestions responsibly, and accept minimal hardware installation.
+These will be validated through usability testing, and iterative prototypes.
+
+**Professional standards and constraints:** Safety in electrical components, proper data protection, ethical AI communication, and sustainability considerations.
+Major uncertainties include user adherence, sensor accuracy, and long-term maintenance.
+
+**Improvements:** Design for modular sensor replacement, ensure offline operation for privacy, and include clear instructions for user oversight.

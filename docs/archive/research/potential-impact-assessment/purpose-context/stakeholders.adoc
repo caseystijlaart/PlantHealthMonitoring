@@ -1,0 +1,10 @@
+= Stakeholders
+**Primary stakeholders:** Individuals who own plants at home or workspaces, affected by improved plant care and educational value.
+
+**Secondary stakeholders:** Hobby gardeners, educators, and tech enthusiasts, affected by exposure to embedded AI applications and environmental awareness.
+
+**Indirect stakeholders:** Environmental organizations, institutions exploring indoor environmental monitoring, or bystanders benefiting from improved ecological literacy.
+
+**Planned consultation:** Prototype testing, and feedback loops to incorporate stakeholder insights.
+
+**Improvements:** Broader engagement with diverse user groups to ensure recommendations are clear and actionable for novices and experts alike.

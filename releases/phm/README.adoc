@@ -27,3 +27,24 @@ NOTE: Sideloady uses your Apple ID only to sign the app locally. It is recommend
 . Open PlantHealthMonitor from your home screen.
 
 IMPORTANT: Free Apple ID accounts expire the app signature after 7 days. Re-sideload the app to renew it. A paid Apple Developer account ($99/year) extends the signature to 1 year.
+
+== Windows Installation
+
+Two options are provided in `windows/`:
+
+=== Portable zip (recommended)
+
+. Extract `phm_v<version>_win64.zip` anywhere.
+. Run `phm_app.exe` from the extracted folder. The exe needs the surrounding DLLs and `data/` folder, so keep the folder together (a shortcut to the exe is fine).
+
+If Windows reports missing `VCRUNTIME140.dll`/`MSVCP140.dll`, install the https://aka.ms/vs/17/release/vc_redist.x64.exe[Visual C++ redistributable].
+
+=== MSIX installer
+
+`phm_v<version>.msix` installs like a regular app (Start-menu entry, clean uninstall) but is signed with a self-signed test certificate, so Windows will refuse it until the certificate is trusted:
+
+. Right-click the `.msix` → *Properties* → *Digital Signatures* → select the signature → *Details* → *View Certificate* → *Install Certificate*.
+. Choose *Local Machine* → *Place all certificates in the following store* → *Trusted Root Certification Authorities* (requires admin).
+. Double-click the `.msix` and click *Install*.
+
+For personal use the portable zip is simpler.

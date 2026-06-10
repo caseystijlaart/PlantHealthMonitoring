@@ -1,0 +1,5 @@
+= Sustainability
+Local TinyML operation reduces cloud energy consumption by running inference directly on ultra-low-power edge devices, but materials like sensors and microcontrollers still carry an environmental cost (Alajlan & Ibrahim, 2022).
+Electronic waste is a growing global concern: the Global E-waste Monitor reports hundreds of thousands of tonnes of e-waste generated annually, with recycling rates remaining critically low (Forti et al., 2020).
+
+**Improvements:** Select durable, low-power components, design for repairability and modularity, and encourage recycling to help counter this broader trend.

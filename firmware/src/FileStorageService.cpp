@@ -1,6 +1,13 @@
+/**
+ * @file FileStorageService.cpp
+ * @brief Implementation of FileStorageService. LittleFS-backed storage for the sensor history CSV and the pairing document.
+ * @version 1.1.0
+ * @date 2026-06-10
+ * @author C. Stijlaart
+ * @copyright Copyright (c) 2026 C. Stijlaart. Released under the MIT License.
+ */
 #include "FileStorageService.hpp"
-
-#include <LittleFS.h>
+#include "CloudLogger.hpp"
 
 #include <algorithm>
 #include <ctime>
@@ -8,12 +15,7 @@
 
 #include "TimeService.hpp"
 
-using namespace pof02;
-
-namespace
-{
-
-std::vector<String> ParseCsvLine(const String &line)
+static std::vector<String> ParseCsvLine(const String &line)
 {
     std::vector<String> parts;
     int i = 0;
@@ -61,35 +63,118 @@ std::vector<String> ParseCsvLine(const String &line)
             i = comma + 1;
         }
     }
-
     return parts;
 }
 
-std::int64_t ParseTimestamp(const String &ts)
+static std::int64_t ParseTimestamp(const String &ts)
 {
     int year, month, day, hour, min, sec;
     if (sscanf(ts.c_str(), "%d-%d-%d %d:%d:%d", &year, &month, &day, &hour, &min, &sec) != 6)
         return 0;
-
     std::tm t{};
     t.tm_year = year - 1900;
-    t.tm_mon = month - 1;
+    t.tm_mon  = month - 1;
     t.tm_mday = day;
     t.tm_hour = hour;
-    t.tm_min = min;
-    t.tm_sec = sec;
+    t.tm_min  = min;
+    t.tm_sec  = sec;
     t.tm_isdst = -1;
-
     const time_t result = mktime(&t);
     return result < 0 ? 0 : static_cast<std::int64_t>(result);
 }
 
-} // namespace
-
 FileStorageService::FileStorageService(TimeService &timeService)
-    : timeService_(timeService) {}
+    : timeService_(timeService) {LittleFS.begin(true);}
 
-std::vector<SensorSnapshot> FileStorageService::LoadHistoryFile(const char *filePath, std::size_t maxEntries, std::size_t &outTotalCount) const
+void FileStorageService::StripCr(String &s)
+{
+    if (s.endsWith("\r"))
+        s.remove(s.length() - 1);
+}
+
+void FileStorageService::WritePaired(const String &ssid,
+                                     const String &password,
+                                     const String &apiKey,
+                                     const String &supabaseUrl)
+{
+    File f = LittleFS.open(kPairingFile, "w");
+    if (!f)
+    {
+        Log.log("[FS] Failed to write pairing document");
+        return;
+    }
+    f.print("paired\n");
+    f.print(ssid);        f.print('\n');
+    f.print(password);    f.print('\n');
+    f.print(apiKey);      f.print('\n');
+    f.print(supabaseUrl); f.print('\n');
+    f.close();
+    Log.log("[FS] Pairing document → paired");
+}
+
+void FileStorageService::WriteUnpaired()
+{
+    File f = LittleFS.open(kPairingFile, "w");
+    if (!f)
+    {
+        Log.log("[FS] Failed to write pairing document");
+        return;
+    }
+    f.print("unpaired\n");
+    f.close();
+    Log.log("[FS] Pairing document → unpaired");
+}
+
+bool FileStorageService::ReadPairing(String &ssidOut,
+                                     String &passwordOut,
+                                     String &apiKeyOut,
+                                     String &supabaseUrlOut)
+{
+    ssidOut = passwordOut = apiKeyOut = supabaseUrlOut = "";
+
+    if (!LittleFS.exists(kPairingFile))
+    {
+        Log.log("[FS] Pairing document not found — creating as unpaired");
+        WriteUnpaired();
+        return false;
+    }
+
+    File f = LittleFS.open(kPairingFile, "r");
+    if (!f)
+        return false;
+
+    String state = f.readStringUntil('\n');
+    StripCr(state);
+    const bool paired = state.startsWith("paired");
+
+    if (paired)
+    {
+        ssidOut         = f.readStringUntil('\n');
+        passwordOut     = f.readStringUntil('\n');
+        apiKeyOut       = f.readStringUntil('\n');
+        supabaseUrlOut  = f.readStringUntil('\n');
+        StripCr(ssidOut);
+        StripCr(passwordOut);
+        StripCr(apiKeyOut);
+        StripCr(supabaseUrlOut);
+    }
+    f.close();
+    return paired;
+}
+
+
+void FileStorageService::ClearHistory(const char *filePath)
+{
+    if (LittleFS.exists(filePath))
+    {
+        LittleFS.remove(filePath);
+        Log.log("[FS] Sensor history cleared");
+    }
+}
+
+std::vector<SensorSnapshot> FileStorageService::LoadHistoryFile(const char *filePath,
+                                                                 std::size_t maxEntries,
+                                                                 std::size_t &outTotalCount) const
 {
     outTotalCount = 0;
 
@@ -112,7 +197,6 @@ std::vector<SensorSnapshot> FileStorageService::LoadHistoryFile(const char *file
 
     const std::size_t dataRows = lines.size() - 1;
     outTotalCount = dataRows;
-
     const std::size_t startIdx = dataRows > maxEntries ? lines.size() - maxEntries : 1;
 
     std::vector<SensorSnapshot> snapshots;
@@ -123,24 +207,25 @@ std::vector<SensorSnapshot> FileStorageService::LoadHistoryFile(const char *file
         const auto parts = ParseCsvLine(lines[i]);
         if (parts.size() < 7)
             continue;
-
         const std::int64_t ts = ParseTimestamp(parts[2]);
         if (ts <= 0)
             continue;
-
         SensorSnapshot s{};
-        s.unixTime = ts;
+        s.unixTime        = ts;
         s.soilMoisturePct = parts[3].toFloat();
-        s.temperatureC = parts[4].toFloat();
-        s.humidityPct = parts[5].toFloat();
-        s.lightLevelPct = parts[6].toFloat();
+        s.temperatureC    = parts[4].toFloat();
+        s.humidityPct     = parts[5].toFloat();
+        s.lightLevelPct   = parts[6].toFloat();
         snapshots.push_back(s);
     }
-
     return snapshots;
 }
 
-bool FileStorageService::AppendToHistoryFile(const char *filePath, const MonitoringCycleResult &result, const char *plantLabel, int deviceId, std::size_t maxEntries)
+bool FileStorageService::AppendToHistoryFile(const char *filePath,
+                                              const MonitoringCycleResult &result,
+                                              const char *plantLabel,
+                                              const char *deviceId,
+                                              std::size_t maxEntries)
 {
     const std::int64_t unixTime = timeService_.GetCurrentUnixTimeUtc() > 0
                                       ? timeService_.GetCurrentUnixTimeUtc()
@@ -160,7 +245,7 @@ bool FileStorageService::AppendToHistoryFile(const char *filePath, const Monitor
     if (!file)
         return false;
 
-    const auto &s = result.snapshot;
+    const auto &s   = result.snapshot;
     const auto &rec = result.recommendation;
 
     String line;
@@ -169,18 +254,16 @@ bool FileStorageService::AppendToHistoryFile(const char *filePath, const Monitor
     line += String(deviceId) + ',';
     line += CsvEscape(timestamp) + ',';
     line += String(s.soilMoisturePct, 3) + ',';
-    line += String(s.temperatureC, 3) + ',';
-    line += String(s.humidityPct, 3) + ',';
-    line += String(s.lightLevelPct, 3) + ',';
-    line += String(rec.water ? 1 : 0) + ',';
-    line += String(rec.reduceTemp ? 1 : 0) + ',';
+    line += String(s.temperatureC, 3)    + ',';
+    line += String(s.humidityPct, 3)     + ',';
+    line += String(s.lightLevelPct, 3)   + ',';
+    line += String(rec.water       ? 1 : 0) + ',';
+    line += String(rec.reduceTemp  ? 1 : 0) + ',';
     line += String(rec.increaseLight ? 1 : 0) + ',';
     line += CsvEscape(String(rec.summary));
-
     file.println(line);
     file.close();
 
-    // Trim to maxEntries*2 to keep flash usage bounded
     File countFile = LittleFS.open(filePath, FILE_READ);
     std::size_t rowCount = 0;
     if (countFile)
@@ -198,7 +281,6 @@ bool FileStorageService::AppendToHistoryFile(const char *filePath, const Monitor
     {
         std::size_t dummy = 0;
         const auto keep = LoadHistoryFile(filePath, maxEntries, dummy);
-
         File rewrite = LittleFS.open(filePath, FILE_WRITE);
         if (rewrite)
         {
@@ -211,16 +293,15 @@ bool FileStorageService::AppendToHistoryFile(const char *filePath, const Monitor
                 l += String(deviceId) + ',';
                 l += CsvEscape(ts) + ',';
                 l += String(snap.soilMoisturePct, 3) + ',';
-                l += String(snap.temperatureC, 3) + ',';
-                l += String(snap.humidityPct, 3) + ',';
-                l += String(snap.lightLevelPct, 3) + F(",0,0,0,\"\"");
+                l += String(snap.temperatureC, 3)    + ',';
+                l += String(snap.humidityPct, 3)     + ',';
+                l += String(snap.lightLevelPct, 3)   + F(",0,0,0,\"\"");
                 rewrite.println(l);
             }
             rewrite.close();
-            Serial.println(F("Trimmed sensor history file"));
+            Log.log("[FS] History file trimmed");
         }
     }
-
     return true;
 }
 

@@ -6,7 +6,7 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-    working_directory: sem-7-AI/personal-project/src/phm_app
+    working_directory: app/ios_only
     scripts:
       - name: Install dependencies
         script: flutter pub get

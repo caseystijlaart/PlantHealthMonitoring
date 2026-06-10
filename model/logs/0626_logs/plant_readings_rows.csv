@@ -1,0 +1,135 @@
+id,plant_label,timestamp,soil_moisture_pct,temperature_c,humidity_pct,light_level_pct,action_water,action_reduce_temp,action_increase_light,recommendation_summary,request_id,risk_class
+164,PeaceLily,2026-06-02 21:20:11.83454+00,42.98,24,61.9,7.89,false,false,true,predWaterMin=158.4 nextCycleMin=79.2 powerSavingPct=62.1 actions:[light ],1780435209,0
+165,PrayerPlant,2026-06-02 21:20:21.31991+00,81.07,24.9,56.3,7.89,false,false,true,predWaterMin=1626.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780435218,0
+166,PeaceLily,2026-06-03 00:20:17.556486+00,43.02,23.6,58.6,0,false,false,true,predWaterMin=170.4 nextCycleMin=85.2 powerSavingPct=64.8 actions:[light ],1780446015,0
+167,PrayerPlant,2026-06-03 00:20:26.663605+00,82.98,24.1,52.5,0,false,false,true,predWaterMin=1424.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780446024,0
+168,PeaceLily,2026-06-03 03:20:17.353493+00,42.05,23.5,57.2,4.69,false,false,true,predWaterMin=143.9 nextCycleMin=71.9 powerSavingPct=58.3 actions:[light ],1780456814,0
+169,PrayerPlant,2026-06-03 03:20:26.525145+00,82.59,24.1,51.5,4.69,false,false,true,predWaterMin=1272.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780456824,0
+170,PeaceLily,2026-06-03 06:20:17.035085+00,42,23.5,58.2,17.19,false,false,true,predWaterMin=140.6 nextCycleMin=70.3 powerSavingPct=57.3 actions:[light ],1780467614,0
+171,PrayerPlant,2026-06-03 06:20:26.214159+00,83.85,24,52.2,17.19,false,false,true,predWaterMin=1059.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780467623,0
+172,PeaceLily,2026-06-03 09:20:16.891046+00,42.15,23.6,61.1,71.33,false,false,false,predWaterMin=139.0 nextCycleMin=69.5 powerSavingPct=56.8 actions:[],1780478414,0
+173,PrayerPlant,2026-06-03 09:20:25.895081+00,84.29,24.1,55.7,14.11,false,false,true,predWaterMin=962.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780478423,0
+182,PeaceLily,2026-06-03 10:02:21.105854+00,41.85,23.8,60.1,57.36,false,false,false,predWaterMin=83.9 nextCycleMin=42.0 powerSavingPct=28.5 actions:[],1780480936,0
+183,PrayerPlant,2026-06-03 10:02:23.594151+00,84.83,25.1,54.8,13.7,false,false,true,predWaterMin=429.4 nextCycleMin=214.7 powerSavingPct=86.0 actions:[light ],1780480939,0
+184,PeaceLily,2026-06-03 10:29:27.044535+00,41.61,23.8,60.8,40.32,false,false,false,predWaterMin=6281.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780482562,0
+185,PrayerPlant,2026-06-03 10:32:25.139081+00,85.22,24.5,52.2,11.65,false,false,true,predWaterMin=10080.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780482740,0
+186,PrayerPlant,2026-06-03 10:42:41.821765+00,64.68,24.5,52.9,13.92,false,false,true,predWaterMin=10080.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780483357,0
+187,PeaceLily,2026-06-03 10:53:03.22072+00,41.37,23.8,60.8,55.56,false,false,false,predWaterMin=5536.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780483978,0
+188,PrayerPlant,2026-06-03 10:55:33.70888+00,67.85,24.5,53.3,8.21,false,false,true,predWaterMin=21600.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780484129,0
+189,PeaceLily,2026-06-03 13:53:12.518897+00,41.51,24,55.4,53.94,false,false,false,predWaterMin=5916.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780494788,0
+190,PrayerPlant,2026-06-03 13:55:43.069473+00,52.73,24.6,47.6,15.34,false,false,true,predWaterMin=21600.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780494938,0
+191,PeaceLily,2026-06-03 16:53:12.382344+00,41.37,23.7,57.5,29.72,false,false,false,predWaterMin=6372.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780505587,0
+192,PrayerPlant,2026-06-03 16:55:42.569195+00,52.39,24.3,51.1,3.66,false,false,true,predWaterMin=21600.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780505738,0
+193,PeaceLily,2026-06-03 19:53:12.12924+00,40.73,23.6,60,0,false,false,true,predWaterMin=6285.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780516387,0
+194,PrayerPlant,2026-06-03 19:55:42.590677+00,52.54,24.1,54.6,0,false,false,true,predWaterMin=21600.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780516538,0
+195,PeaceLily,2026-06-03 22:53:11.838286+00,40.29,23.4,60.5,0,false,false,true,predWaterMin=5446.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780527187,0
+196,PrayerPlant,2026-06-03 22:55:42.079713+00,54.1,23.9,54.2,0,false,false,true,predWaterMin=21600.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780527338,0
+197,PeaceLily,2026-06-04 01:53:11.687687+00,40,23.2,59.2,0,false,false,true,predWaterMin=4609.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780537987,0
+198,PrayerPlant,2026-06-04 01:55:41.981086+00,53.8,23.8,53.3,0,false,false,true,predWaterMin=20676.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780538137,0
+199,PeaceLily,2026-06-04 04:53:11.204012+00,39.9,23.1,59.2,6.57,false,false,true,predWaterMin=4214.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780548786,0
+200,PrayerPlant,2026-06-04 04:55:41.657345+00,54.29,23.7,52.9,0,false,false,true,predWaterMin=21492.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780548937,0
+201,PeaceLily,2026-06-04 07:53:11.089904+00,39.85,22.8,60.1,57.31,false,false,false,predWaterMin=4256.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780559587,0
+202,PrayerPlant,2026-06-04 07:55:41.211602+00,55.27,23.3,54.2,9.89,false,false,true,predWaterMin=21600.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780559737,0
+203,PeaceLily,2026-06-04 10:53:10.75994+00,39.56,22.9,62.3,56.51,false,false,false,predWaterMin=4784.5 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780570386,0
+204,PrayerPlant,2026-06-04 10:55:43.876117+00,55.32,23.5,57,8.84,false,false,true,predWaterMin=19789.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780570539,0
+205,PeaceLily,2026-06-04 13:53:10.542786+00,39.76,23,59.6,59.51,false,false,false,predWaterMin=5061.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780581186,0
+206,PrayerPlant,2026-06-04 13:55:41.190789+00,55.76,23.7,53.1,16.8,false,false,true,predWaterMin=20760.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780581337,0
+207,PeaceLily,2026-06-04 16:53:11.868707+00,39.61,22.9,53.9,62.1,false,false,false,predWaterMin=5474.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780591986,0
+208,PrayerPlant,2026-06-04 16:55:40.645921+00,56.68,23.5,47,17.92,false,false,true,predWaterMin=21600.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780592136,0
+209,PeaceLily,2026-06-04 19:53:10.067082+00,39.12,22.7,52.3,0.02,false,false,true,predWaterMin=5420.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780602785,0
+210,PrayerPlant,2026-06-04 19:55:41.375202+00,56.05,23.4,45,0,false,false,true,predWaterMin=18089.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780602937,0
+211,PeaceLily,2026-06-04 22:53:09.765343+00,38.88,22.7,53.8,0,false,false,true,predWaterMin=4672.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780613585,0
+212,PrayerPlant,2026-06-04 22:55:40.364371+00,56.98,23.3,46.7,0,false,false,true,predWaterMin=20821.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780613736,0
+213,PeaceLily,2026-06-05 01:53:11.619788+00,38.29,22.5,55.5,0,false,false,true,predWaterMin=3655.5 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780624385,0
+214,PrayerPlant,2026-06-05 01:55:39.977479+00,56.59,23,48.7,0,false,false,true,predWaterMin=17475.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780624535,0
+215,PeaceLily,2026-06-05 04:53:09.376912+00,38.54,22.4,56.1,37.19,false,false,false,predWaterMin=3039.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780635185,0
+216,PrayerPlant,2026-06-05 04:55:39.702487+00,57.37,22.9,49.4,1.71,false,false,true,predWaterMin=19103.5 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780635335,0
+217,PeaceLily,2026-06-05 07:53:11.123174+00,37.27,22.3,60,57.02,false,false,false,predWaterMin=3892.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780645984,0
+218,PrayerPlant,2026-06-05 07:55:39.382035+00,57.56,22.9,53.7,21.34,false,false,true,predWaterMin=17597.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780646135,0
+219,PeaceLily,2026-06-05 10:53:08.852986+00,36.88,22.4,63.4,52.43,false,false,false,predWaterMin=3746.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780656784,0
+220,PrayerPlant,2026-06-05 10:55:39.265719+00,57.41,23.2,55.7,10.72,false,false,true,predWaterMin=16766.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780656935,0
+221,PeaceLily,2026-06-05 13:53:08.484085+00,36.2,22.5,63,46.42,false,false,false,predWaterMin=4271.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780667584,0
+222,PrayerPlant,2026-06-05 13:55:38.95632+00,57.32,23.3,54.8,7.67,false,false,true,predWaterMin=16826.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780667734,0
+223,PeaceLily,2026-06-05 16:53:10.914574+00,35.85,22.6,61.4,21.1,false,false,true,predWaterMin=4289.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780678386,0
+224,PrayerPlant,2026-06-05 16:55:38.770244+00,57.9,23.4,53.6,0,false,false,true,predWaterMin=17995.5 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780678534,0
+225,PrayerPlant,2026-06-05 17:26:33.920208+00,48.1,23.6,59,1.56,false,false,true,predWaterMin=10007.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],0,0
+226,PeaceLily,2026-06-05 19:53:07.844504+00,60.44,22.7,62.1,0,false,false,true,predWaterMin=499.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780689183,0
+227,PrayerPlant,2026-06-05 20:26:43.45575+00,100,23.4,58.5,0,false,false,true,predWaterMin=1267.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780691199,0
+228,PeaceLily,2026-06-05 22:53:07.80557+00,59.22,22.6,61.7,0,false,false,true,predWaterMin=4721.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780699983,0
+229,PrayerPlant,2026-06-05 23:26:43.130536+00,100,23.2,54.9,0,false,false,true,predWaterMin=10746.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780701999,0
+230,PeaceLily,2026-06-06 01:53:07.43902+00,58.39,22.4,60.8,0,false,false,true,predWaterMin=4975.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780710783,0
+231,PrayerPlant,2026-06-06 02:26:42.880834+00,100,23.1,53.1,0,false,false,true,predWaterMin=10732.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780712798,0
+232,PeaceLily,2026-06-06 04:53:07.256112+00,57.95,22.3,60.3,39.49,false,false,false,predWaterMin=4412.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780721583,0
+233,PrayerPlant,2026-06-06 05:26:42.623147+00,100,23,52.6,6.89,false,false,true,predWaterMin=10945.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780723598,0
+234,PeaceLily,2026-06-06 07:53:06.936755+00,57.71,22.4,60.5,57.85,false,false,false,predWaterMin=4508.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780732382,0
+235,PrayerPlant,2026-06-06 08:26:42.756824+00,68.05,23.2,52.6,14.97,false,false,true,predWaterMin=21600.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780734398,0
+236,PeaceLily,2026-06-06 10:53:06.737414+00,57.22,22.6,53.7,62.47,false,false,false,predWaterMin=5025.5 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780743182,0
+237,PrayerPlant,2026-06-06 11:26:42.126031+00,69.07,23.4,45.8,15.53,false,false,true,predWaterMin=16777.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780745198,0
+238,PeaceLily,2026-06-06 13:53:06.37416+00,56.63,22.7,53.2,58.46,false,false,false,predWaterMin=5218.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780753982,0
+239,PrayerPlant,2026-06-06 14:26:41.752349+00,69.85,23.5,43.6,4.44,false,false,true,predWaterMin=15844.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780755997,0
+240,PeaceLily,2026-06-06 16:53:06.138175+00,56.73,22.4,58,42.83,false,false,false,predWaterMin=5378.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780764782,0
+241,PrayerPlant,2026-06-06 17:26:41.664309+00,70.59,23.2,50.2,0.34,false,false,true,predWaterMin=15110.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780766797,0
+242,PeaceLily,2026-06-06 19:53:05.921794+00,56.2,22.4,61.1,0.95,false,false,true,predWaterMin=5373.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780775581,0
+243,PrayerPlant,2026-06-06 20:26:41.450332+00,71.27,23.2,53.9,0,false,false,true,predWaterMin=14769.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780777597,0
+244,PeaceLily,2026-06-06 22:53:05.608752+00,56.29,22.4,57.9,0,false,false,true,predWaterMin=4510.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780786381,0
+245,PrayerPlant,2026-06-06 23:26:41.210467+00,70.68,22.9,50,0,false,false,true,predWaterMin=12300.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780788397,0
+246,PeaceLily,2026-06-07 01:53:05.537547+00,56,22.1,54.4,0,false,false,true,predWaterMin=3965.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780797181,0
+247,PrayerPlant,2026-06-07 02:26:40.881297+00,70.83,22.4,47.5,0,false,false,true,predWaterMin=13013.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780799196,0
+248,PeaceLily,2026-06-07 04:53:05.08874+00,56,21.8,56.6,10.18,false,false,true,predWaterMin=3718.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780807981,0
+249,PrayerPlant,2026-06-07 05:26:48.046892+00,71.61,22.3,49.8,0,false,false,true,predWaterMin=13924.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780810003,0
+250,PeaceLily,2026-06-07 07:53:04.773641+00,55.56,21.9,57.5,57.39,false,false,false,predWaterMin=4294.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780818780,0
+251,PrayerPlant,2026-06-07 08:26:40.328201+00,71.51,22.5,51.3,8.69,false,false,true,predWaterMin=12770.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780820796,0
+252,PeaceLily,2026-06-07 10:53:04.532684+00,55.32,21.9,57,53.53,false,false,false,predWaterMin=4283.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780829580,0
+253,PrayerPlant,2026-06-07 11:26:40.229981+00,71.27,22.6,50.1,8.64,false,false,true,predWaterMin=12649.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780831596,0
+254,PeaceLily,2026-06-07 13:53:04.302378+00,54.73,22,56.3,52.55,false,false,false,predWaterMin=6087.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780840380,0
+255,PrayerPlant,2026-06-07 14:26:39.977695+00,70.05,22.7,48.4,8.23,false,false,true,predWaterMin=11234.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780842395,0
+256,PeaceLily,2026-06-07 16:53:04.096462+00,54.59,21.9,57.3,38.29,false,false,false,predWaterMin=5860.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780851180,0
+257,PrayerPlant,2026-06-07 17:26:39.723249+00,71.8,22.6,49.7,1.95,false,false,true,predWaterMin=14955.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780853195,0
+258,PeaceLily,2026-06-07 19:53:03.987291+00,54.83,21.8,58.4,0,false,false,true,predWaterMin=5516.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780861979,0
+259,PrayerPlant,2026-06-07 20:26:39.762369+00,70.88,22.5,51.9,0,false,false,true,predWaterMin=11733.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780863995,0
+260,PeaceLily,2026-06-07 22:53:03.544944+00,54.78,21.8,61.3,0,false,false,true,predWaterMin=5175.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780872779,0
+261,PrayerPlant,2026-06-07 23:26:39.787409+00,71.17,22.6,52.7,0,false,false,true,predWaterMin=13822.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780874795,0
+262,PeaceLily,2026-06-08 01:53:03.371812+00,54.39,21.8,60.2,0,false,false,true,predWaterMin=5144.5 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780883579,0
+263,PrayerPlant,2026-06-08 02:26:38.881786+00,70.34,22.5,51.8,0,false,false,true,predWaterMin=11751.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780885594,0
+264,PeaceLily,2026-06-08 04:53:03.036247+00,54.78,21.7,58.5,40.17,false,false,false,predWaterMin=3281.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780894378,0
+265,PrayerPlant,2026-06-08 05:26:38.747808+00,71.27,22.4,51.1,6.64,false,false,true,predWaterMin=14212.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780896394,0
+266,PeaceLily,2026-06-08 07:53:02.789616+00,54.63,21.8,62,60.63,false,false,false,predWaterMin=4750.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780905178,0
+267,PrayerPlant,2026-06-08 08:26:38.435063+00,71.07,22.6,53.7,14.36,false,false,true,predWaterMin=12719.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780907194,0
+268,PeaceLily,2026-06-08 10:53:02.425085+00,54.24,22,57.5,56.26,false,false,false,predWaterMin=5512.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780915978,0
+269,PrayerPlant,2026-06-08 11:26:38.264726+00,71.95,22.9,48.6,14.29,false,false,true,predWaterMin=14226.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780917994,0
+270,PrayerPlant,2026-06-08 13:19:01.503003+00,71.12,23.3,50.9,12.14,false,false,true,predWaterMin=11332.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780924737,0
+271,PeaceLily,2026-06-08 13:53:02.221457+00,53.56,22.2,55.7,55.34,false,false,false,predWaterMin=5830.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780926778,0
+272,PrayerPlant,2026-06-08 16:19:10.970371+00,67.9,23.7,50,0,false,false,true,predWaterMin=8917.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780935546,0
+273,PeaceLily,2026-06-08 16:53:02.086922+00,53.37,22.2,59.9,25.52,false,false,false,predWaterMin=6383.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780937577,0
+274,PrayerPlant,2026-06-08 18:50:23.352133+00,64.63,23.6,53.8,0.85,false,false,true,predWaterMin=8970.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780944618,0
+275,PrayerPlant,2026-06-08 19:28:47.48196+00,64.83,23.8,52.9,0,false,false,true,predWaterMin=13208.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780946923,0
+277,PeaceLily,2026-06-08 19:53:01.162111+00,53.02,22.1,61.5,0,false,false,true,predWaterMin=6398.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780948377,0
+278,PrayerPlant,2026-06-08 22:08:45.815+00,65.41,23.9,53.5,0.9,false,false,true,predWaterMin=10417.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780956523,0
+279,PrayerPlant,2026-06-08 22:16:16.481539+00,65.46,23.7,53.7,1.42,false,false,true,predWaterMin=11352.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780956973,0
+280,PrayerPlant,2026-06-08 22:24:53.938269+00,65.22,23.8,53.5,1.95,false,false,true,predWaterMin=10982.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780957490,0
+281,PrayerPlant,2026-06-08 22:46:49.915764+00,65.41,23.6,53.8,1.1,false,false,true,predWaterMin=11514.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780958807,0
+282,PeaceLily,2026-06-08 22:53:00.694261+00,53.02,22.1,62.6,0,false,false,true,predWaterMin=5687.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780959176,0
+283,PrayerPlant,2026-06-08 23:29:35.456669+00,65.46,22.9,52.7,1.59,false,false,true,predWaterMin=11163.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780961372,0
+284,PrayerPlant,2026-06-08 23:30:35.441125+00,65.71,22.9,53.2,1.25,false,false,true,predWaterMin=11409.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780961432,0
+285,PrayerPlant,2026-06-08 23:31:41.254164+00,65.85,22.8,53.2,0,false,false,true,predWaterMin=11276.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780961498,0
+286,PrayerPlant,2026-06-08 23:32:26.115698+00,65.07,22.9,53.3,0,false,false,true,predWaterMin=10200.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780961543,0
+287,PeaceLily,2026-06-08 23:34:48.871261+00,52.49,22.2,59.1,1.64,false,false,true,predWaterMin=7479.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780961686,0
+288,PeaceLily,2026-06-08 23:38:21.551303+00,51.9,22.3,59,3.2,false,false,true,predWaterMin=6350.1 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780961898,0
+289,PeaceLily,2026-06-08 23:38:49.80787+00,52.05,22.3,58.9,1.83,false,false,true,predWaterMin=6631.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780961926,0
+290,PrayerPlant,2026-06-09 02:32:25.630469+00,64.78,22.6,53,0,false,false,true,predWaterMin=10165.5 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780972342,0
+291,PeaceLily,2026-06-09 02:39:04.043784+00,51.46,21.9,59.4,0,false,false,true,predWaterMin=6495.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780972741,0
+292,PrayerPlant,2026-06-09 05:32:25.309561+00,64.39,22.4,53.2,8.13,false,false,true,predWaterMin=9858.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780983142,0
+293,PeaceLily,2026-06-09 05:39:03.862067+00,51.85,21.8,59.2,52.04,false,false,false,predWaterMin=6421.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1780983540,0
+294,PrayerPlant,2026-06-09 08:32:25.204994+00,64.73,22.5,50.7,4.3,false,false,true,predWaterMin=10658.9 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780993942,0
+295,PeaceLily,2026-06-09 08:39:03.523198+00,51.12,21.7,56.8,16.09,false,false,true,predWaterMin=6297.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1780994340,0
+297,PrayerPlant,2026-06-09 11:32:24.981572+00,63.51,22.6,49.6,4.64,false,false,true,predWaterMin=9163.7 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1781004742,0
+299,PeaceLily,2026-06-09 13:13:29.467518+00,45.71,21.9,53.8,51.97,false,false,false,predWaterMin=3501.4 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1781010806,0
+306,PeaceLily,2026-06-09 20:50:02.527811+00,45.56,21.7,57.2,0,false,false,true,predWaterMin=5457.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1781038199,0
+308,PrayerPlant,2026-06-09 21:03:09.491994+00,61.02,22.4,50.6,0,false,false,false,predWaterMin=9633.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1781038986,0
+309,PrayerPlant,2026-06-09 21:03:25.246683+00,61.02,22.4,50.6,0,false,false,false,predWaterMin=9633.0 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1781039002,0
+311,PeaceLily,2026-06-09 23:57:42.070415+00,46.78,21.6,57,0,false,false,true,predWaterMin=4622.3 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1781049459,0
+312,PrayerPlant,2026-06-10 00:11:05.715497+00,64.15,22.2,50.3,0,false,false,false,predWaterMin=12179.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1781050263,0
+313,PeaceLily,2026-06-10 02:57:43.876638+00,45.9,21.4,54.9,0,false,false,true,predWaterMin=5163.6 nextCycleMin=240.0 powerSavingPct=87.5 actions:[light ],1781060261,0
+314,PrayerPlant,2026-06-10 03:11:07.910334+00,66.2,21.9,48,0,false,false,false,predWaterMin=11920.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1781061065,0
+315,PeaceLily,2026-06-10 05:57:48.289015+00,46.44,21.4,56.6,36.51,false,false,false,predWaterMin=4906.8 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1781071065,0
+316,PrayerPlant,2026-06-10 06:11:08.019596+00,66.68,21.8,50.1,0.81,false,false,false,predWaterMin=10076.2 nextCycleMin=240.0 powerSavingPct=87.5 actions:[],1781071865,0
