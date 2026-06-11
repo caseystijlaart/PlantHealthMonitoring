@@ -2,7 +2,7 @@
 
 An embedded plant monitoring system that uses on-device machine learning to classify plant health and predict care needs in real time — no cloud dependency for inference.
 
-Sensor data is collected by an ESP32 microcontroller, classified by a TinyML model running directly on the device, and surfaced to the user via a Flutter app (iOS + Android) with push notifications.
+Sensor data is collected by an ESP32 microcontroller, classified by a TinyML model running directly on the device, and surfaced to the user via a Flutter app (Android, Windows, iOS) with push notifications.
 
 ---
 
@@ -15,7 +15,7 @@ ESP32 — TinyML inference → risk class + time-to-action prediction
     ↓
 Supabase (cloud sync every 3 hours)
     ↓
-Flutter app (iOS + Android) — live dashboard + push notifications
+Flutter app (Android / Windows / iOS) — live dashboard + push notifications
 ```
 
 ML inference runs fully on the ESP32. An internet connection is only needed to sync results to the app — classification never leaves the device.
@@ -28,8 +28,9 @@ ML inference runs fully on the ESP32. An internet connection is only needed to s
 ┌─────────────────────────────────────────────────────────┐
 │  ESP32 firmware                                         │
 │                                                         │
-│  LittleFS pairing doc  →  WiFi credentials + state      │
-│  BLE provisioning      →  receive WiFi creds from app   │
+│  LittleFS pairing doc  →  WiFi creds, API key, URL      │
+│  BLE provisioning      →  receive WiFi creds, Supabase  │
+│                           URL + API key from the app    │
 │  TinyML (TFLM)         →  risk classification           │
 │  Supabase HTTP         →  upload readings every 3 h     │
 │  Command poll (5 s)    →  trigger_measurement / reset   │
@@ -44,7 +45,7 @@ ML inference runs fully on the ESP32. An internet connection is only needed to s
 └─────────────────────────────────────────────────────────┘
              ↕ Supabase client + Realtime
 ┌─────────────────────────────────────────────────────────┐
-│  Flutter app (Android)                                  │
+│  Flutter app (Android / Windows / iOS)                  │
 │                                                         │
 │  BLE provisioning  →  scan, send WiFi creds to ESP32    │
 │  Dashboard         →  live readings, risk, predictions  │
@@ -60,11 +61,24 @@ ML inference runs fully on the ESP32. An internet connection is only needed to s
 - **Health classification** — healthy / moderate risk / high risk via TensorFlow Lite Micro MLP
 - **Predictive irrigation** — regression model predicts minutes until watering is needed
 - **Care recommendations** — rule-based engine combining sensor values, ML output, and per-plant preferences
-- **BLE provisioning** — add devices wirelessly from the app; no hardcoded credentials
+- **BLE provisioning** — add devices wirelessly from the app; no hardcoded credentials, no secrets in the firmware build
 - **Multi-plant support** — each plant has its own device and preference profile
 - **On-demand measurement** — request an immediate sensor reading from the app
 - **Push notifications** — instant alert on risk change; optional daily summary
-- **Cross-platform app** — iOS and Android; BLE provisioning is Android-only, all other features work on both platforms
+- **Cross-platform app** — Android, Windows, and iOS
+
+**Platform support:**
+
+| Feature | Android | Windows | iOS |
+|---|---|---|---|
+| Dashboard, charts, data | ✅ | ✅ | ✅ |
+| Plant preferences | ✅ | ✅ | ✅ |
+| Local notifications | ✅ | ❌ | ✅ |
+| Settings, device list | ✅ | ✅ | ✅ |
+| Add Device (BLE provisioning) | ✅ | ✅ | ❌ |
+| Delete / reset device | ✅ | ✅ | ✅ |
+
+Devices provisioned from any platform are accessible from all of them.
 
 ---
 
@@ -82,18 +96,41 @@ ML inference runs fully on the ESP32. An internet connection is only needed to s
 ## Project structure
 
 ```
-firmware/          ESP32 firmware (PlatformIO)
-  src/main.cpp     Main application
-  platformio.ini   Build environments
-  partitions_ota_large.csv  Custom partition table for OTA builds
-app/               Flutter Android app
-  lib/main.dart    Dashboard, settings, notifications
-  lib/provisioning.dart  BLE provisioning + plant setup screens
-  lib/secrets.dart Supabase URL and anon key (gitignored)
+firmware/                ESP32 firmware (PlatformIO)
+  src/                   One .cpp per class — main.cpp is orchestration only
+  include/               Headers (CloudService, ProvisioningService, MLLayer,
+                         FileStorageService, RecommendationEngine, sensors, …)
+  web/                   Small web app for adjusting settings on a connected device
+  platformio.ini         Single build environment: esp32_provisioning
+
+app/
+  android_/              Main Flutter app (Android, Windows, iOS targets)
+    lib/main.dart        Entry point
+    lib/core/            Theme and colors
+    lib/services/        Supabase, app settings, notifications, BLE constants
+    lib/screens/         Dashboard, data, settings, provisioning screens
+    lib/widgets/         Shared widgets
+    lib/secrets.dart     Supabase URL and anon key (gitignored)
+  ios_only/              Stripped iOS build — no BLE/WiFi plugins, runs unsigned
+                         (same lib/ layout, minus provisioning screens)
+
+model/                   ML training pipeline
+  python/                Training, validation, TinyML export, retraining scripts
+  datasets/              Source datasets (MIT licence)
+  data/                  Training outputs, validation results, exports
+  logs/                  Device logs used for retraining
+
+data/models/             Exported model weights shipped in the firmware
+
 supabase/
-  migrations.sql   All database schema changes — run in order
-datasets/          Synthetic training data (MIT licence)
+  migrations.sql         All database schema changes — run in order
+
+docs/                    Manual, system design, AI Act compliance (AsciiDoc + PDF)
+
+codemagic.yaml           CI: unsigned iOS .ipa build of app/ios_only
 ```
+
+Both Flutter projects share the same `lib/` architecture: `core/` (theme), `services/` (Supabase, settings, notifications), `screens/` (one file per screen), `widgets/`.
 
 ---
 
@@ -120,39 +157,25 @@ Run `supabase/migrations.sql` in the Supabase SQL editor in order. The migration
 
 ### Firmware
 
-Requires [PlatformIO](https://platformio.org/).
+Requires [PlatformIO](https://platformio.org/). No secrets are needed at build time — WiFi credentials, the Supabase URL, and the API key are sent to the device at runtime over BLE during provisioning and stored in the on-device pairing document.
 
 ```sh
 cd firmware
-cp secrets.ini.example secrets.ini
-```
-
-Fill in `secrets.ini` with your Supabase API key (and WiFi credentials for legacy environments). Flash the provisioning environment to a new device:
-
-```sh
 platformio run -e esp32_provisioning -t upload
 platformio device monitor -b 115200
 ```
 
-The device will enter BLE provisioning mode on first boot and wait for the app to send WiFi credentials.
-
-For legacy devices with hardcoded credentials:
-
-```sh
-platformio run -e esp32_com3_non_local -t upload
-```
+The device enters BLE provisioning mode on first boot and waits for the app to send WiFi credentials.
 
 ### Flutter app
 
-Requires Flutter 3.x or later.
+Requires Flutter 3.x or later. The main app is in `app/android_/`:
 
 ```sh
-cd app
+cd app/android_
 flutter pub get
-flutter run        # Android or iOS
+flutter run        # Android, Windows, or iOS
 ```
-
-> BLE provisioning (Add Device) is Android-only. On iOS the dashboard, charts, settings, preferences, and notifications all work — devices must be provisioned from an Android device first.
 
 Create `lib/secrets.dart`:
 
@@ -160,6 +183,8 @@ Create `lib/secrets.dart`:
 const supabaseUrl  = 'https://your-project.supabase.co';
 const supabaseAnon = 'your-anon-key';
 ```
+
+> BLE provisioning (Add Device) works on Android and Windows. On iOS the dashboard, charts, settings, preferences, and notifications all work — devices must be provisioned from another platform first. For unsigned iOS sideloading, use the stripped `app/ios_only/` project instead (see its README).
 
 ---
 
@@ -169,16 +194,17 @@ const supabaseAnon = 'your-anon-key';
 2. Open the app → Settings → Add Device
 3. App scans for BLE devices, shows discovered PHM devices
 4. Tap a device → enter WiFi credentials → tap Provision
-5. ESP32 connects to WiFi, registers itself in the `devices` table
-6. App detects the new row and shows the plant setup screen
-7. Enter plant name and care preferences → Save
-8. Device picks up the plant label within 5 seconds and begins monitoring
+5. App sends WiFi credentials, Supabase URL, and API key over BLE
+6. ESP32 connects to WiFi, registers itself in the `devices` table
+7. App detects the new row and shows the plant setup screen
+8. Enter plant name and care preferences → Save
+9. Device picks up the plant label within 5 seconds and begins monitoring
 
 ---
 
 ## Partition table
 
-The default ESP32 partition (1.25 MB) is too small for BLE + TinyML + TLS combined. The `esp32_provisioning` environment uses `huge_app.csv` (built-in), which provides a 3 MB app slot.
+The default ESP32 partition (1.25 MB) is too small for BLE + TinyML + TLS combined. The `esp32_provisioning` environment uses `huge_app.csv` (built-in), which provides a 3 MB app slot. `partitions_ota_large.csv` is available for OTA builds.
 
 ---
 
@@ -191,13 +217,14 @@ Two models trained offline in Python (scikit-learn) and exported as C++ weight h
 | Health risk classifier | MLP (ReLU + softmax) | Risk class 0 / 1 / 2 |
 | Predictive irrigation | MLP (ReLU + linear, log1p target) | Minutes until watering needed |
 
-Training scripts and the synthetic dataset are in `datasets/`. The dataset is released under the **MIT licence**.
+Training scripts, datasets, and validation outputs are in `model/` (`python/`, `datasets/`, `data/`); the scripts also support retraining from real device logs. The exported weights used by the firmware live in `data/models/`. The datasets are released under the **MIT licence**.
 
 ---
 
 ## Licence
 
 Source code — MIT
+
 Training dataset — MIT
 
 ---
