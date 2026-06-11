@@ -22,6 +22,12 @@ class NotificationService {
       requestSoundPermission: true,
     );
     await _plugin.initialize(const InitializationSettings(android: android, iOS: ios));
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    }
     _initialized = true;
   }
 
