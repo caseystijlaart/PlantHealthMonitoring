@@ -5,32 +5,34 @@ The requirements matrix provides a consolidated view of all the requirements, sh
 [Use cases vs user requirements coverage]
 .Use Cases vs User Requirements Coverage
 |===
-| | UR_001 | UR_002 | UR_003 | UR_004 | UR_005
+| | UR_001 | UR_002 | UR_003 | UR_004 | UR_005 | UR_006 | UR_007
 
-| UC01 | X |  |  |  | 
-| UC02 |  | X |  |  | 
-| UC03 |  | X | X |  | 
-| UC04 |  |  |  | X | 
-| UC05 |  |  |  |  | X
+| UC01 | X |  |  |  |  |  |
+| UC02 |  | X |  |  |  |  |
+| UC03 |  | X | X |  |  |  |
+| UC04 |  |  |  | X |  |  |
+| UC05 |  |  |  |  | X |  |
+| UC06 |  |  |  |  |  | X |
+| UC07 |  |  |  |  |  |  | X
 
 |===
 
 [Functional requirements vs user requirements coverage]
 .Functional Requirements vs User Requirements Coverage
 |===
-| | UR_001 | UR_002 | UR_003 | UR_004 | UR_005
+| | UR_001 | UR_002 | UR_003 | UR_004 | UR_005 | UR_006 | UR_007
 
-| FR_001 | X |  |  |  | 
-| FR_002 | X |  |  |  | 
-| FR_003 |  | X |  |  | 
-| FR_004 |  | X |  |  | 
-| FR_005 |  | X |  |  | 
-| FR_006 |  | X |  |  | 
-| FR_007 |  |  | X |  | 
-| FR_008 |  |  | X |  | 
-| FR_009 |  |  |  | X | 
-| FR_010 |  |  |  | X | 
-| FR_011 |  |  |  |  | X
-| FR_012 |  |  |  |  | X
+| FR_001 | X |  |  |  |  |  |
+| FR_002 | X |  |  | X |  |  |
+| FR_003 | X |  |  |  |  |  |
+| FR_004 |  | X |  |  |  |  |
+| FR_005 |  | X |  |  | X |  |
+| FR_006 |  | X |  |  |  |  |
+| FR_007 |  |  | X |  |  |  |
+| FR_008 |  |  |  | X |  |  |
+| FR_009 |  |  |  |  | X |  |
+| FR_010 |  |  |  |  | X |  |
+| FR_011 |  |  |  |  |  | X | X
+| FR_012 |  |  |  |  |  |  | X
 
 |===

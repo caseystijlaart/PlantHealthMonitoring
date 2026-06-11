@@ -2,9 +2,10 @@
 
 .Document History
 |===
-|Version    |Date       |Status |Author                                 |Description                    |Remarks
+|Version    |Date       |Status |Author                                 |Description                   
 
-|0.1        |30-03-2026 |Draft  | Casey Stijlaart               | Initial Draft | -
-|0.1        |01-04-2026 |Draft  | Casey Stijlaart               | Additional Details and design | -
-|1.0        |08-04-2026 |First Version  | Casey Stijlaart               | Completed | -
+|0.1        |30-03-2026 |Draft  | Casey Stijlaart               | Initial Draft 
+|0.1        |01-04-2026 |Draft  | Casey Stijlaart               | Additional Details and design 
+|1.0        |08-04-2026 |First Version  | Casey Stijlaart               | Completed 
+|1.1        |10-06-2026 |Updated  | Casey Stijlaart               | Revision. Updated various parts to reflect latest software 
 |===

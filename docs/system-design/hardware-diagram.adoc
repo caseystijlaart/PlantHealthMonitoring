@@ -1,21 +1,22 @@
 = Hardware Diagram
 
-The system will be composed of several hardware modules.
-Some logical units run on multiple physical blocks.
-The table, <<Used hardware components>>, describes the individual hardware hardware components.
-The diagram, <<Hardware connection>>, the connection between the various hardware components.
+The system is composed of several hardware modules.
+The table, <<Used hardware components>>, describes the individual hardware components.
+The diagram, <<hardware-connection>>, shows the connections between the various hardware components, including the GPIO pin assignments used by the firmware.
 
 [.table]
 .Used hardware components
 |===
 | Hardware block      | Description
 
-| ESP32      | The ESP32 will be used as the ML unit. 
-It will run the machine learning models and will be responsible for processing the data from the various sensors and making decisions and predictions based upon that data.
-| Environmental Sensors | There are various sensors used to measure data with the help of the ESP32 CP2102.
-| Interface (IF) | The interface is used to display the data and predictions from the ESP32 CP2102. It will also be used to receive user input for certain actions.
+| ESP32 DevKit      | Runs the ML models, processes the sensor data, and stores the pairing state and sensor history on flash (LittleFS). Uses the 3 MB `huge_app` partition table to fit BLE, TinyML, and TLS.
+| Capacitive soil moisture sensor | Analog, GPIO 34. Calibrated from ADC 3500 (dry) to 1450 (wet).
+| DHT22 | Digital temperature and humidity sensor, GPIO 4.
+| LDR light sensor | Analog, GPIO 35, with a 10 kΩ pull-down resistor.
+| Phone (mobile app) | Displays data and recommendations, pairs devices over BLE, and issues commands through the cloud.
+| USB power supply | Powers the ESP32 over USB (5 V).
 |===
 
-[.figure]
+[[hardware-connection]]
 .Hardware connection
-image::../images/hw-diagram.svg[]
+image::hw-diagram.svg[]

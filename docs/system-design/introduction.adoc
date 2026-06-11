@@ -3,3 +3,6 @@
 This document serves as a comprehensive guide detailing the design and architecture of the embedded system that focusses on plant monitoring and care.
 The system is designed to monitor various environmental parameters such as soil moisture, temperature, humidity, and light intensity to ensure optimal conditions for plant health.
 It contains a detailed system description with multiple diagrams defining all of the hardware components and the behavior of the system.
+
+The behavioral diagrams in this document (class diagrams, flow charts, and sequence diagrams) are generated from the firmware source code (v1.2) and therefore describe the system as realized.
+A complete API reference of the firmware, generated with Doxygen from the annotated source code, accompanies this document at `related/html/index.html`.

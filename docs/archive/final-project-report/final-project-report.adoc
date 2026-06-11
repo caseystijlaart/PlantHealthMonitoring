@@ -1,7 +1,7 @@
 = PlantHealthMonitor : Final Project Report
 :title-page: true
 :author: Casey Stijlaart
-:docdatetime: 2026-06-03
+:docdatetime: 2026-06-11
 :doctype: report
 :sectnums:
 :toc:
@@ -126,32 +126,51 @@ Requirements were derived from the project goal and structured using MoSCoW prio
 
 ==== User Requirements
 
-[cols="1,4", options="header"]
+[cols="2,15,3", options="header"]
+|===
+| ID | Requirement | Use Case(s)
+
+| UR_001 | The user should be able to add a new plant by pairing a device and entering its care requirements. | UC01
+| UR_002 | The user should be able to monitor the health status of a plant. | UC02, UC03
+| UR_003 | The user should be able to view current and historical plant data. | UC03
+| UR_004 | The user should be able to update plant care settings. | UC04
+| UR_005 | The user should receive notifications and care recommendations when abnormal conditions occur. | UC05
+| UR_006 | The user should be able to request an immediate measurement on demand. | UC06
+| UR_007 | The user should be able to remove a device so it can be re-paired. | UC07
+|===
+
+==== Functional Requirements
+
+[cols="2,15,3", options="header"]
+|===
+| ID | Requirement | Use Case(s)
+
+| FR_001 | The user interface must allow the user to add a plant with its care preferences. | UC01
+| FR_002 | The data storage must store devices, plant profiles, and care settings. | UC01, UC04
+| FR_003 | The edge node must be configurable through BLE provisioning. | UC01
+| FR_004 | The sensor array must provide environmental data: soil moisture, temperature, humidity, and light level. | UC02
+| FR_005 | The edge node must use an on-device ML model to predict plant health. | UC02, UC05
+| FR_006 | The edge node must store measurement results locally and send them to the data storage. | UC02
+| FR_007 | The user interface must display current and historical plant data. | UC03
+| FR_008 | The user interface must allow the user to update plant care settings, which the edge node applies. | UC04
+| FR_009 | The edge node must detect abnormal conditions and generate care recommendations. | UC05
+| FR_010 | The user interface must notify the user when abnormal conditions are detected. | UC05
+| FR_011 | The edge node must respond to user commands issued through the data storage. | UC06, UC07
+| FR_012 | The edge node must support a factory reset that erases all of its state. | UC07
+|===
+
+==== Non-Functional Requirements
+
+[cols="2,18", options="header"]
 |===
 | ID | Requirement
 
-| UR_001 | The user can add a new plant with care requirements.
-| UR_002 | The user can monitor the health status of a plant.
-| UR_003 | The user can view current and historical sensor data.
-| UR_004 | The user can update plant care settings.
-| UR_005 | The user receives a notification when an abnormal condition is detected.
+| NFR_001 | The system should be modular so components can be updated or replaced independently.
+| NFR_002 | The system should support multiple edge nodes and plants.
+| NFR_003 | The edge node must operate within embedded hardware constraints such as limited memory and processing power (ML inference, BLE, and TLS combined on a single ESP32).
+| NFR_004 | WiFi credentials and the cloud API key must not be stored in the firmware binary; they are transferred once over BLE during provisioning, and removing a device must erase them.
+| NFR_005 | The edge node should operate autonomously after provisioning, without requiring the user interface to be active.
 |===
-
-==== Key Functional Requirements
-
-* The system collects soil moisture, temperature, humidity, and light readings from sensors connected to an ESP32.
-* The ESP32 preprocesses sensor data and runs on-device ML inference to classify plant health.
-* Classification results and care recommendations are transmitted to a cloud database (Supabase).
-* A cross-platform Flutter app subscribes to live data and displays health status, sensor readings, and recommendations.
-* The app sends push notifications when risk class changes to moderate or high.
-* The user can configure per-plant care preferences (low / mid / high per sensor).
-
-==== Key Non-Functional Requirements
-
-* The ML model must fit within the ESP32's available flash and SRAM.
-* The system must function without internet access for on-device inference.
-* Sensor data must not include personally identifiable information.
-* The system must support multiple plants simultaneously.
 
 <<<
 
@@ -178,23 +197,27 @@ The system is organised into three layers:
 
 The edge layer operates independently. If the network is unavailable, the ESP32 continues collecting and classifying data locally, buffering readings in a CSV history on its filesystem (LittleFS). When connectivity is restored, data is synced to the cloud.
 
+Besides the scheduled 3-hour monitoring cycle, the device polls the cloud every 5 seconds for user commands: an on-demand measurement or a factory reset. This gives the app indirect control over the device without requiring a direct connection after the initial BLE pairing.
+
 .System Architecture — Hardware and Data Flow
-image::../system-design/images/hw-diagram.png[Hardware architecture diagram, align="center"]
+image::../system-design/images/hw-diagram.svg[Hardware architecture diagram, align="center"]
 
 <<<
 
 === Use Cases
 
-Five use cases define the system's functional scope:
+Seven use cases define the system's functional scope:
 
-* *UC01 — Add Plant*: The user adds a plant with a label and sets initial care preferences. These are saved to the cloud and picked up by the device on its next sync.
+* *UC01 — Add Plant*: The user pairs a device over BLE, then adds a plant with a label and initial care preferences. These are saved to the cloud and picked up by the device.
 * *UC02 — Monitor Plant*: The ESP32 continuously reads sensors, runs inference, and uploads results. The app reflects the latest status in real time via a Supabase Realtime subscription.
 * *UC03 — View Plant Data*: The user opens the data view to see sensor history charts for the last week (up to 56 readings at 3-hour intervals).
 * *UC04 — Update Settings*: The user edits care preferences in the app. A version counter prevents stale overwrites when settings are synced across devices.
 * *UC05 — Abnormal Condition Alert*: When risk class changes to moderate (1) or high (2), the app generates a push notification. Duplicate notifications are suppressed.
+* *UC06 — Request Measurement*: The user requests an immediate measurement; the device picks up the command flag within 5 seconds and runs a full monitoring cycle.
+* *UC07 — Remove Device*: The user removes a device; it factory-resets (erasing history, credentials, and its cloud registration) and reboots into pairing mode.
 
 .Use Case Diagram — Plant Health Monitoring System
-image::../system-design/images/use-case-diagram.png[Use case diagram, align="center"]
+image::../system-design/images/use-case-diagram.svg[Use case diagram, align="center"]
 
 <<<
 
@@ -219,11 +242,20 @@ image::../system-design/images/use-case-diagram.png[Use case diagram, align="cen
 | PredictiveIrrigationModel
 | Regression MLP (trained offline, exported as C++ header weights) that predicts minutes until watering is needed.
 
+| ProvisioningService
+| BLE service advertised on first boot (`PHM-XXXXXX`); receives WiFi credentials and cloud configuration from the app and stores them in the LittleFS pairing document.
+
+| CloudService
+| HTTPS REST client for Supabase: device registration, readings and model metrics upload, profile fetching, and command flag polling.
+
+| FileStorageService / CloudLogger
+| Persist the pairing state and CSV sensor history on LittleFS; mirror device log output to the cloud for remote diagnostics.
+
 | Cloud (Supabase)
-| Two tables: `plant_readings` (sensor data, risk class, recommendations) and `plant_settings` (per-plant preferences with version control).
+| Five tables: `devices` (registrations, heartbeat, command flags), `plant_settings` (per-plant preferences with version control), `plant_readings` (sensor data, risk class, recommendations), `model_metrics`, and `logs`.
 
 | Flutter App
-| Realtime dashboard, plant selector, sensor history charts, preferences editor, notification scheduler.
+| Device pairing (BLE), realtime dashboard, plant selector, sensor history charts, preferences editor, notification scheduler, device commands (measure now, remove device).
 |===
 
 .Component Diagram — System Components and Interactions
@@ -292,7 +324,7 @@ On-device TFLM inference was compared against the same model running in Python (
 
 === Firmware (ESP32)
 
-The production firmware (`src/prototype-non-local/`) is built with PlatformIO. The main monitoring loop runs every 3 hours:
+The production firmware (`src/firmware/`, v1.1) is built with PlatformIO. The main monitoring loop runs every 3 hours:
 
 . Sensor readings are acquired from the three sensor types.
 . Readings are normalised against per-plant preference thresholds.
@@ -302,18 +334,25 @@ The production firmware (`src/prototype-non-local/`) is built with PlatformIO. T
 . The `RecommendationEngine` combines sensor values, preference thresholds, ML risk class, and the time estimate to produce a `Recommendation` struct (boolean action flags + summary string).
 . The result is serialised to JSON and uploaded to Supabase via HTTPS.
 
-WiFi credentials and plant identity are configured at build time via `platformio.ini` build flags. OTA firmware updates are supported over WiFi for field updates.
+Device configuration is handled entirely at runtime through BLE provisioning. On first boot (or after a factory reset) the device advertises a BLE service; the app transfers the WiFi credentials, cloud API key, and Supabase URL, after which the device registers itself in the cloud and stores its pairing state on LittleFS. No credentials are compiled into the firmware binary, and unpairing a device erases them by construction. Between monitoring cycles, a 5-second polling loop picks up user commands (on-demand measurement, factory reset) from the cloud.
+
+The full API reference of the firmware is generated with Doxygen from the annotated source code and is included with the system design document.
+
+<<<
 
 === Mobile Application (Flutter)
 
-The Flutter app (`src/phm_app/`) targets iOS and Windows. Key implementation details:
+The Flutter app (`src/app/`) targets iOS and Windows, with an Android variant maintained alongside. Key implementation details:
 
+* Device pairing is implemented over BLE: the app scans for unpaired devices (`PHM-XXXXXX`), transfers the WiFi and cloud configuration, and then polls the `devices` table until the device registers itself.
+On iOS this provisioning flow (BLE device scanning and WiFi network scanning) is not available, because the required capabilities cannot be used when sideloading with a free Apple ID; devices must be paired from the Android build instead (see <<_ios_platform_restrictions>>).
 * A Supabase Realtime subscription delivers `plant_readings` inserts to the app in real time without polling.
 * The dashboard renders a status card per plant, updating reactively when new data arrives.
 * Sensor tiles show the current reading and highlight whether it falls within the plant's preference band.
 * The preferences editor reads and writes to the `plant_settings` table with an incrementing version field to handle concurrent edits.
 * Push notifications are scheduled locally using `flutter_local_notifications` with timezone-aware scheduling for the daily summary feature.
 * Notification deduplication prevents repeated alerts for the same persisting condition.
+* Device management lets the user trigger an immediate measurement or remove a device by setting command flags on its `devices` row.
 
 <<<
     
@@ -326,12 +365,14 @@ The Flutter app (`src/phm_app/`) targets iOS and Windows. Key implementation det
 | ESP32 microcontroller | Edge processing, sensor acquisition, on-device ML inference.
 | PlatformIO | Firmware build system and dependency management.
 | TensorFlow Lite Micro (TFLM) | On-device neural network inference.
-| LittleFS | Filesystem for CSV history on ESP32 flash.
+| LittleFS | Filesystem for the pairing state and CSV history on ESP32 flash.
+| BLE (Bluetooth Low Energy) | Runtime device provisioning from the app; no credentials in the firmware binary.
 | Supabase | Managed PostgreSQL + Realtime backend (cloud layer).
 | Flutter | Cross-platform mobile and desktop application.
 | fl_chart | Sensor history charts in the Flutter app.
 | flutter_local_notifications | Push notifications and daily summary scheduling.
 | Python / scikit-learn | Offline model training and validation.
+| Doxygen | Generated API reference of the firmware source code.
 |===
 
 <<<
@@ -351,6 +392,8 @@ This confirmed that the C++ weight export, feature normalisation, and inference 
 .Model Validation Output — 100% Risk Class Agreement Between TFLM and Python
 image::../proof-of-concept/images/comparison.png[Model validation output showing 100% agreement, align="center"]
 
+<<<
+
 === Functional Testing
 
 Each use case was tested manually against the running system:
@@ -364,6 +407,8 @@ Each use case was tested manually against the running system:
 | UC03 | Navigate to the data view and verify charts populate with historical readings. | Pass
 | UC04 | Change a preference in the app; verify the device picks it up on the next cycle. | Pass
 | UC05 | Trigger an abnormal reading; verify a push notification is received. | Pass
+| UC06 | Request a measurement in the app; verify the device runs a cycle within seconds. | Pass
+| UC07 | Remove a device in the app; verify it factory-resets and re-enters BLE pairing mode. | Pass
 |===
 
 === Embedded Performance
@@ -381,6 +426,7 @@ The completed system meets all must-have requirements and the majority of should
 * A cross-platform Flutter application displays live sensor data, health status, recommendations, and historical charts.
 * Push notifications alert users to plant care needs in real time.
 * The system supports multiple plants simultaneously with per-plant preference profiles.
+* Devices are paired at runtime over BLE and managed through the app for their full lifecycle (provisioning, on-demand measurements, removal with a clean factory reset) — no firmware recompilation is needed for setup.
 * The full development cycle — from background research and dataset design through to embedded deployment and cross-platform app — was completed within the semester.
 
 The iterative prototyping process was particularly valuable. The failures of PoC-01 and PoC-02 led directly to a better understanding of what makes ML justifiable over simpler rule-based approaches, and resulted in a more robust final implementation.
@@ -415,13 +461,21 @@ Training a model in Python with scikit-learn and deploying it as a TFLM C++ weig
 
 The validation step in PoC-03 — running both models side-by-side on the same test vectors — was the only reliable way to catch these issues, and doing it systematically is what gave confidence in the final deployment.
 
-=== WiFi Dependency for Configuration
+=== Device Configuration Without Recompilation
 
-The current setup requires WiFi credentials to be compiled into the firmware, which is impractical for end users. This was identified as a known limitation early and has been documented as a future improvement (WiFi provisioning / BLE configuration).
+Early versions required WiFi credentials to be compiled into the firmware, which is impractical for end users. This was resolved in the final iteration with runtime BLE provisioning: the app transfers the configuration once over Bluetooth and the device persists it locally. Getting this right introduced its own challenges — the default ESP32 partition table (1.25 MB) is too small for BLE, TinyML, and TLS combined, requiring the 3 MB `huge_app` partition layout, and the pairing lifecycle (provisioning, grace periods for unassigned devices, factory reset paths) needed careful state management to ensure a removed device always reboots into a clean, credential-free state.
 
-=== Notification Reliability on iOS
+<<<
+    
+=== iOS Platform Restrictions
 
-iOS applies strict restrictions on background processes and notification permissions that made the local notification system more complex to implement reliably than on Android. The 7-day certificate expiry imposed by free Apple ID sideloading also means iOS users face a recurring friction point, although this is only relevant for non-EU users due to Apple's policy changes.
+iOS posed several challenges that did not exist on the other platforms, all stemming from developing without a paid Apple Developer account:
+
+* *Device provisioning is not available in the iOS build.* Sideloading with a free Apple ID does not grant the capabilities needed for the pairing flow — BLE device scanning and WiFi network scanning. New devices therefore have to be paired from the Android build; once paired, the iOS app provides the full monitoring experience, since all further communication runs through the cloud.
+* *Notification reliability.* iOS applies strict restrictions on background processes and notification permissions that made the local notification system more complex to implement reliably than on Android.
+* *Recurring re-signing (outside the EU).* Outside the EU, free Apple ID sideloading imposes a 7-day certificate expiry, meaning the app must be re-signed weekly. Within the EU this limitation does not apply — sideloaded apps are unlimited in time as a result of EU legislation.
+
+With a paid Apple Developer account, the provisioning entitlements and longer-lived signing would resolve the first and third points without code changes to the shared Flutter codebase.
 
 <<<
 
@@ -487,19 +541,18 @@ A technically correct recommendation that is presented in alarming or confusing 
 
 Several improvements were identified during the project but were out of scope for this semester. These are documented in the manual and summarised here:
 
-* *WiFi provisioning* — allow network credentials and plant identity to be configured from the app on first boot, removing the need for firmware recompilation.
-* *BLE configuration and sync* — use Bluetooth Low Energy as an alternative channel for device setup and offline data access.
+* *BLE data sync* — extend the existing BLE provisioning channel to also support offline data access when no WiFi network is available.
 * *Built-in plant species library* — ship pre-defined care profiles for common species so users do not need to configure preferences manually.
 * *Additional sensors* — pH, electrical conductivity, CO₂, and water level sensors would extend the system's applicability.
 * *Automated watering* — connect a pump and relay to act on irrigation predictions autonomously.
-* *Continuous ML retraining* — collect anonymised data from deployed devices to improve models over time via OTA weight updates.
+* *Continuous ML retraining* — collect anonymised data from deployed devices to improve models over time; this would require adding over-the-air (OTA) update support, which the current firmware does not include.
 * *Multi-user support* — authentication and shared plant ownership for households with multiple users.
 
 <<<
 
 == Conclusion
 
-PlantHealthMonitor demonstrates that meaningful AI-driven plant care is achievable on affordable embedded hardware without cloud dependency for inference. The project delivered a working end-to-end system: sensors on an ESP32 running a trained neural network, syncing to a cloud backend, and surfacing results in a cross-platform mobile app with real-time notifications.
+PlantHealthMonitor demonstrates that meaningful AI-driven plant care is achievable on affordable embedded hardware without cloud dependency for inference. The project delivered a working end-to-end system: sensors on an ESP32 running a trained neural network, paired and managed entirely from a cross-platform mobile app over BLE and the cloud, with real-time data, recommendations, and notifications.
 
 Beyond the technical deliverable, the project produced genuine learning outcomes around the responsible application of ML — particularly the importance of dataset design in justifying ML over simpler alternatives, and the ethical responsibility of presenting AI-generated suggestions in a way that preserves user autonomy and trust.
 

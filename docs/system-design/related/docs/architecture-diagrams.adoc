@@ -1,0 +1,652 @@
+= Firmware Architecture Diagrams
+C. Stijlaart
+v1.1.0, 2026-06-10
+:toc:
+:toclevels: 3
+:imagesdir: images
+:plantuml-format: svg
+
+Generated from the source and header files in `firmware/src` and `firmware/include` (v1.1.0).
+
+Render with:
+
+[source,powershell]
+----
+$env:GRAPHVIZ_DOT = "C:\Program Files\Graphviz\bin\dot.exe"
+asciidoctor -r asciidoctor-diagram architecture-diagrams.adoc
+----
+
+This produces `architecture-diagrams.html` plus one SVG per diagram in `images/`.
+Requires Java and Graphviz (`asciidoctor-diagram` downloads the PlantUML jar automatically).
+
+== Class Diagrams
+
+=== Monitoring pipeline (sensors → ML → recommendation)
+
+[plantuml, target=class-monitoring-pipeline]
+....
+@startuml
+skinparam classAttributeIconSize 0
+hide empty members
+
+class MonitoringSystem {
+  -soilSensor_ : SoilMoistureSensor
+  -tempHumiditySensor_ : TempHumiditySensor
+  -lightSensor_ : LightSensor
+  -mlLayer_ : MLLayer
+  -recommendationEngine_ : RecommendationEngine
+  -predictiveIrrigationModel_ : PredictiveIrrigationModel
+  -plantProfile_ : PlantRuleProfile
+  -history_ : SensorHistory
+  -startUnixTime_ : int64_t
+  -startMillis_ : unsigned long
+  +MonitoringSystem(soil, tempHum, light, ml, recEngine, profile, historySize, startUnixTime)
+  +Init() : bool
+  +RunCycleDetailed() : MonitoringCycleResult
+  +SetPlantProfile(profile) : void
+  +GetPlantProfile() : const PlantRuleProfile&
+  +LoadHistoricalSnapshots(snapshots) : void
+  +SetStartUnixTime(unixTime) : void
+}
+
+class SoilMoistureSensor {
+  -pin_ : int
+  -adcDry_ : float
+  -adcWet_ : float
+  +SoilMoistureSensor(pin, adcDry, adcWet)
+  +ReadPercent() : float
+}
+
+class TempHumiditySensor {
+  -pin_ : int
+  -dhtType_ : int
+  -dht_ : DHT
+  +TempHumiditySensor(pin, dhtType = 22)
+  +Init() : bool
+  +Read() : pair<float, float>
+}
+
+class LightSensor {
+  -pin_ : int
+  +LightSensor(pin)
+  +ReadLightLevelPct() : float
+}
+
+class MLLayer {
+  -backend_ : MLBackend
+  +MLLayer(backend = TINYML_TFLM)
+  +Predict(features) : MLResult
+  -PredictRuleBased(features) : MLResult
+  -PredictEmbeddedMLP(features) : MLResult
+}
+
+class PredictiveIrrigationModel {
+  +PredictMinutesUntilWatering(features, profile) : float
+}
+
+class RecommendationEngine {
+  +Build(snapshot, mlResult, profile, predictedMinutesToWater) : Recommendation
+}
+
+class SensorHistory {
+  -capacity_ : size_t
+  -data_ : vector<SensorSnapshot>
+  +SensorHistory(capacity)
+  +Add(snapshot) : void
+  +Size() : size_t
+  +Empty() : bool
+  +Latest() : const SensorSnapshot&
+  +Data() : const vector<SensorSnapshot>&
+}
+
+class FeatureEngineering {
+  {static} +Build(history) : FeatureVector
+}
+
+class Stress {
+  {static} +Score(level) : float
+  {static} +Combined(moisture, temp, humidity, light) : float
+}
+
+enum Level {
+  kLow
+  kOk
+  kHigh
+}
+
+enum MLBackend {
+  RULE_BASED
+  TINYML_TFLM
+  EDGE_IMPULSE
+}
+
+MonitoringSystem *-- SoilMoistureSensor
+MonitoringSystem *-- TempHumiditySensor
+MonitoringSystem *-- LightSensor
+MonitoringSystem *-- MLLayer
+MonitoringSystem *-- RecommendationEngine
+MonitoringSystem *-- PredictiveIrrigationModel
+MonitoringSystem *-- SensorHistory
+MonitoringSystem ..> FeatureEngineering : uses
+MLLayer --> MLBackend
+FeatureEngineering ..> SensorHistory : reads
+RecommendationEngine ..> Stress : uses
+Stress --> Level
+@enduml
+....
+
+=== Shared data types (`PlantTypes.hpp`)
+
+[plantuml, target=class-plant-types]
+....
+@startuml
+skinparam classAttributeIconSize 0
+hide empty members
+
+class SensorSnapshot <<struct>> {
+  +soilMoisturePct : float
+  +temperatureC : float
+  +humidityPct : float
+  +lightLevelPct : float
+  +unixTime : int64_t
+}
+
+class FeatureVector <<struct>> {
+  {static} +kCount : size_t = 13
+  +values : array<float, 13>
+}
+
+class MLResult <<struct>> {
+  +risk : RiskClass
+  +probabilities : array<float, 3>
+  +confidence : float
+}
+
+class Recommendation <<struct>> {
+  +water : bool
+  +reduceTemp : bool
+  +increaseLight : bool
+  +predictedMinutesToWater : float
+  +optimizedCycleMinutes : float
+  +baselineCycleMinutes : float
+  +estimatedPowerSavingPct : float
+  +summary : char[128]
+}
+
+class PlantRuleProfile <<struct>> {
+  +plantName : char[32]
+  +deviceId : char[40]
+  +deviceName : char[32]
+  +soilMoistureThresholds : MetricThresholds
+  +temperatureThresholds : MetricThresholds
+  +humidityThresholds : MetricThresholds
+  +lightThresholds : MetricThresholds
+  +preferences : UserPreferences
+}
+
+class MetricThresholds <<struct>> {
+  +lowMax : float
+  +midMin : float
+  +midMax : float
+  +highMin : float
+  +highMax : float
+}
+
+class UserPreferences <<struct>> {
+  +soilMoisture : PreferenceBand
+  +temperature : PreferenceBand
+  +humidity : PreferenceBand
+  +light : PreferenceBand
+}
+
+class MonitoringCycleResult <<struct>> {
+  +snapshot : SensorSnapshot
+  +features : FeatureVector
+  +mlResult : MLResult
+  +recommendation : Recommendation
+}
+
+enum RiskClass {
+  HEALTHY
+  MODERATE_STRESS
+  HIGH_STRESS
+}
+
+enum PreferenceBand {
+  pLow
+  pMid
+  pHigh
+}
+
+MonitoringCycleResult *-- SensorSnapshot
+MonitoringCycleResult *-- FeatureVector
+MonitoringCycleResult *-- MLResult
+MonitoringCycleResult *-- Recommendation
+PlantRuleProfile "1" *-- "4" MetricThresholds
+PlantRuleProfile *-- UserPreferences
+UserPreferences --> PreferenceBand
+MLResult --> RiskClass
+@enduml
+....
+
+=== Connectivity, storage & services
+
+[plantuml, target=class-services]
+....
+@startuml
+skinparam classAttributeIconSize 0
+hide empty members
+
+class CloudService {
+  -base_ : String
+  -apiKey_ : String
+  +SetConfig(supabaseBase, apiKey) : void
+  +RegisterDevice(deviceId, deviceName, nowUnix) : void
+  +DeleteDevice(deviceId) : void
+  +UpdateLastSeen(deviceId, nowUnix) : void
+  +ReportModelVersion(deviceId, modelVersion) : void
+  +FetchPlantLabel(deviceId, outLabel) : bool
+  +FetchProfileSettings(plantLabel, outProfile, outVersion, currentVersion) : bool
+  +SendReading(json) : void
+  +SendModelMetrics(json) : void
+  +CheckTriggerReset(deviceId) : bool
+  +CheckTriggerMeasurement(deviceId) : bool
+  -Post(url, json) : bool
+  -Get(url) : String
+  -Patch(url, json) : bool
+  -AddAuth(https) : void
+  {static} -ParsePreference(payload, key) : PreferenceBand
+}
+
+class WiFiCommunication {
+  -ssid_ : String
+  -password_ : String
+  +SetCredentials(ssid, password) : void
+  +EnsureConnected() : void
+  +IsConnected() : bool
+  +HasCredentials() : bool
+}
+
+class ProvisioningService <<static>> {
+  {static} -ssid_ : String
+  {static} -password_ : String
+  {static} -deviceId_ : String
+  {static} -apiKey_ : String
+  {static} -supabaseUrl_ : String
+  {static} -reAdvertise_ : volatile bool
+  {static} +getOrCreateDeviceId() : String
+  {static} +begin(deviceName, deviceId) : void
+  {static} +stop() : void
+  {static} +maintainAdvertising() : void
+  {static} +isProvisioned() : bool
+  {static} +getSsid() : const String&
+  {static} +getPassword() : const String&
+  {static} +getApiKey() : const String&
+  {static} +getSupabaseUrl() : const String&
+}
+
+class FileStorageService {
+  -timeService_ : TimeService&
+  +FileStorageService(timeService)
+  +LoadHistoryFile(filePath, maxEntries, outTotalCount) : vector<SensorSnapshot>
+  +AppendToHistoryFile(filePath, result, plantLabel, deviceId, maxEntries) : bool
+  +ClearHistory(filePath) : void
+  +WritePaired(ssid, password, apiKey, supabaseUrl) : void
+  +WriteUnpaired() : void
+  +ReadPairing(ssidOut, passwordOut, apiKeyOut, supabaseUrlOut) : bool
+  -CsvEscape(input) : String
+  {static} -StripCr(s) : void
+}
+
+class TimeService {
+  -synced_ : bool
+  +GetCurrentUnixTimeUtc() : int64_t
+  +FormatTimestampLocal(unixTime) : String
+  +SyncTimeWithNtp(timeoutMs = 20000) : bool
+  +IsSynced() : bool
+}
+
+class NvsStorage <<static>> {
+  {static} +writeString(key, value) : bool
+  {static} +readString(key, defaultValue) : String
+  {static} +hasKey(key) : bool
+  {static} +remove(key) : bool
+  {static} +clearAll() : void
+}
+
+class CloudLogger {
+  -line_ : String
+  -queue_ : vector<Entry>
+  -baseUrl_ : String
+  -apiKey_ : String
+  -caCert_ : const char*
+  +write(c) : size_t
+  +write(buffer, size) : size_t
+  +configure(baseUrl, apiKey, caCert) : void
+  +uploadPending(deviceId, deviceName) : void
+  -finishLine() : void
+  {static} -classify(line) : const char*
+  {static} -jsonEscape(s) : String
+}
+
+class Print <<Arduino>> {
+}
+
+class "main.cpp" as main_cpp <<orchestrator>> {
+  +setup() : void
+  +loop() : void
+  -RunMonitoringCycle() : void
+  -RunProvisioningMode() : void
+  -PerformFactoryReset() : void
+  -DeriveDeviceName() : String
+}
+
+Print <|-- CloudLogger
+FileStorageService --> TimeService : timestamps rows
+main_cpp ..> CloudService
+main_cpp ..> WiFiCommunication
+main_cpp ..> ProvisioningService
+main_cpp ..> FileStorageService
+main_cpp ..> TimeService
+main_cpp ..> NvsStorage
+main_cpp ..> CloudLogger
+main_cpp ..> MonitoringSystem
+ProvisioningService ..> NvsStorage : device_id
+CloudLogger ..> CloudService : same Supabase\nlogs table
+@enduml
+....
+
+== Flow Charts
+
+=== Boot / `setup()` flow
+
+[plantuml, target=flow-boot]
+....
+@startuml
+start
+:Read device_id from NVS
+Derive device name from MAC;
+if (Pairing document on LittleFS?) then (no)
+  :RunProvisioningMode
+  (BLE provisioning, see sequence diagram);
+  :Re-read pairing document;
+else (yes)
+endif
+:CloudService.SetConfig + Log.configure
+(base URL + API key from pairing doc);
+:WiFi: SetCredentials + EnsureConnected;
+if (WiFi connected?) then (yes)
+  :NTP sync, set start time,
+  UpdateLastSeen, ReportModelVersion;
+else (no)
+endif
+if (Plant label known?) then (no)
+  :FetchPlantLabel from cloud;
+  if (Label found or just provisioned?) then (no)
+    :PerformFactoryReset
+    (clear history, unpair, delete device,
+    clear NVS, restart); <<#pink>>
+    stop
+  else (yes)
+  endif
+else (yes)
+endif
+:FetchProfileSettings → SetPlantProfile;
+:LoadHistoryFile from LittleFS →
+LoadHistoricalSnapshots;
+if (MonitoringSystem.Init OK?) then (no)
+  :Halt forever; <<#pink>>
+  stop
+else (yes)
+endif
+if (Plant label set?) then (yes)
+  :Run first monitoring cycle
+  + UpdateLastSeen;
+else (no)
+  :Wait for plant setup in app;
+endif
+:Log.uploadPending;
+:enter loop();
+stop
+@enduml
+....
+
+=== Main `loop()` flow
+
+[plantuml, target=flow-loop]
+....
+@startuml
+start
+:loop tick;
+if (5 s since last command check?) then (yes)
+  :Reconnect WiFi if down;
+  if (Plant label empty and device_id set?) then (yes)
+    if (FetchPlantLabel succeeded?) then (yes)
+      :Fetch profile, set it,
+      run first cycle, UpdateLastSeen,
+      reset no-plant counter;
+    else (no)
+      if (No-plant counter >= 30 ticks?) then (yes)
+        :PerformFactoryReset; <<#pink>>
+        stop
+      else (no)
+        :Log grace-period count;
+      endif
+    endif
+  else (no)
+    :Reset no-plant counter;
+  endif
+  if (trigger_reset set in cloud?) then (yes)
+    :PerformFactoryReset; <<#pink>>
+    stop
+  else (no)
+  endif
+  if (trigger_measurement set in cloud?) then (yes)
+    :RunMonitoringCycle + UpdateLastSeen;
+  else (no)
+  endif
+  :Log.uploadPending;
+else (no)
+endif
+if (3 h since last scheduled cycle?) then (yes)
+  :Reconnect WiFi if down;
+  :FetchProfileSettings → SetPlantProfile;
+  :RunMonitoringCycle + UpdateLastSeen;
+else (no)
+endif
+stop
+@enduml
+....
+
+=== Monitoring cycle internals (`MonitoringSystem::RunCycleDetailed`)
+
+[plantuml, target=flow-cycle]
+....
+@startuml
+start
+:Read DHT: temperature + humidity;
+:Read soil moisture %
+Read light level %;
+:Timestamp snapshot:
+startUnixTime + elapsed millis;
+if (Soil reading valid (>= 0)?) then (no)
+  :Log warning,
+  return empty result; <<#pink>>
+  stop
+else (yes)
+endif
+:Add snapshot to SensorHistory ring buffer;
+:FeatureEngineering::Build → 13-feature vector;
+fork
+  :MLLayer::Predict →
+  RiskClass + confidence;
+fork again
+  :PredictiveIrrigationModel →
+  minutes until watering;
+end fork
+:RecommendationEngine::Build →
+water / temp / light actions + summary;
+:Return MonitoringCycleResult;
+stop
+@enduml
+....
+
+== Sequence Diagrams
+
+=== BLE provisioning (first boot, unpaired)
+
+[plantuml, target=seq-provisioning]
+....
+@startuml
+autonumber
+participant "Flutter App" as App
+participant "main.cpp" as Main
+participant "ProvisioningService\n(BLE)" as Prov
+participant "NvsStorage" as NVS
+participant "WiFiCommunication" as WiFi
+participant "TimeService" as Time
+participant "CloudService" as Cloud
+participant "FileStorageService" as FS
+
+Main -> Prov : getOrCreateDeviceId()
+Prov -> NVS : read/write "device_id"
+NVS --> Prov : device UUID
+Main -> Prov : begin(deviceName, deviceId)
+note over Prov : Advertise PHM service\nUUID 4fafc201-…914b
+
+App -> Prov : connect (BLE central)
+App -> Prov : read DeviceId characteristic
+Prov --> App : device UUID
+App -> Prov : write SSID
+App -> Prov : write Password
+App -> Prov : write API key
+App -> Prov : write Supabase URL
+
+loop until isProvisioned()
+  Main -> Prov : maintainAdvertising()
+  note over Prov : re-advertise if app\ndisconnected mid-flow
+end
+
+Main -> Prov : stop()
+Main -> WiFi : SetCredentials(ssid, pass)
+Main -> WiFi : EnsureConnected()
+alt WiFi failed
+  Main -> NVS : clearAll()
+  Main -> Main : ESP.restart()
+else WiFi connected
+  Main -> Cloud : SetConfig(base + /rest/v1, apiKey)
+  Main -> Time : SyncTimeWithNtp(10 s)
+  Main -> Cloud : RegisterDevice(id, name, now)
+  Main -> NVS : writeString("device_id", id)
+  Main -> FS : WritePaired(ssid, pass, apiKey, url)
+  note over Main : gJustProvisioned = true
+end
+@enduml
+....
+
+=== Monitoring cycle + cloud upload
+
+[plantuml, target=seq-cycle]
+....
+@startuml
+autonumber
+participant "main.cpp" as Main
+participant "MonitoringSystem" as Mon
+participant "TempHumiditySensor" as DHT
+participant "SoilMoistureSensor" as Soil
+participant "LightSensor" as Light
+participant "SensorHistory" as Hist
+participant "FeatureEngineering" as FE
+participant "MLLayer" as ML
+participant "PredictiveIrrigationModel" as Irr
+participant "RecommendationEngine" as Rec
+participant "FileStorageService" as FS
+participant "CloudService" as Cloud
+
+Main -> Mon : RunCycleDetailed()
+activate Mon
+Mon -> DHT : Read()
+DHT --> Mon : (temperature, humidity)
+Mon -> Soil : ReadPercent()
+Soil --> Mon : soil moisture %
+Mon -> Light : ReadLightLevelPct()
+Light --> Mon : light %
+Mon -> Hist : Add(snapshot)
+Mon -> FE : Build(history)
+FE --> Mon : FeatureVector (13)
+Mon -> ML : Predict(features)
+ML --> Mon : MLResult (risk, confidence)
+Mon -> Irr : PredictMinutesUntilWatering(features, profile)
+Irr --> Mon : minutes
+Mon -> Rec : Build(snapshot, mlResult, profile, minutes)
+Rec --> Mon : Recommendation
+Mon --> Main : MonitoringCycleResult
+deactivate Mon
+
+Main -> FS : AppendToHistoryFile(result, label, id)
+alt plant label set
+  Main -> Cloud : SendReading(json) → plant_readings
+  Main -> Cloud : SendModelMetrics(json) → model_metrics
+else no plant label
+  Main -> Main : skip upload
+end
+@enduml
+....
+
+=== Cloud command polling (every 5 s)
+
+[plantuml, target=seq-polling]
+....
+@startuml
+autonumber
+participant "main.cpp (loop)" as Main
+participant "WiFiCommunication" as WiFi
+participant "CloudService" as Cloud
+participant "Supabase REST" as SB
+participant "CloudLogger" as Log
+
+Main -> WiFi : EnsureConnected() (if down)
+Main -> Cloud : CheckTriggerReset(deviceId)
+Cloud -> SB : GET devices?trigger_reset
+SB --> Cloud : flag
+alt trigger_reset set
+  Cloud --> Main : true
+  Main -> Main : PerformFactoryReset()
+else not set
+  Cloud --> Main : false
+  Main -> Cloud : CheckTriggerMeasurement(deviceId)
+  Cloud -> SB : GET + clear trigger_measurement
+  alt trigger_measurement set
+    Cloud --> Main : true
+    Main -> Main : RunMonitoringCycle()
+    Main -> Cloud : UpdateLastSeen(deviceId, now)
+  else not set
+    Cloud --> Main : false
+  end
+end
+Main -> Log : uploadPending(deviceId, deviceName)
+Log -> SB : batched insert into logs\n(if queued + online)
+@enduml
+....
+
+=== Factory reset
+
+[plantuml, target=seq-factory-reset]
+....
+@startuml
+autonumber
+participant "main.cpp" as Main
+participant "CloudLogger" as Log
+participant "FileStorageService" as FS
+participant "CloudService" as Cloud
+participant "NvsStorage" as NVS
+
+note over Main : Triggered by cloud trigger_reset,\nor missing plant_settings\n(boot / 30-tick grace period)
+Main -> Log : uploadPending(deviceId, deviceName)
+Main -> FS : ClearHistory("/sensor_history.csv")
+Main -> FS : WriteUnpaired()
+Main -> Cloud : DeleteDevice(deviceId)
+Main -> NVS : clearAll()
+Main -> Main : ESP.restart() → boots unpaired,\nre-enters BLE provisioning
+@enduml
+....

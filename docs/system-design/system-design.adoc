@@ -34,7 +34,7 @@ include::design/design.adoc[]
 include::system-behavior/system-behavior.adoc[]
 
 <<<
-    
+
 include::hardware-diagram.adoc[]
 
 

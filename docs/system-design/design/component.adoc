@@ -10,13 +10,12 @@ Next to that, a component diagram, <<Diagram>> is given to illustrate the relati
 |===
 | Component | Description
 
-| Edge Node (EN) | The Edge Node is responsible for receiving sensor data, performing preprocessing and local ML inference, and managing device-specific configuration. 
-It communicates with the central storage to upload measurements and receives configuration during provisioning.
-| Sensor Array (SA)| The sensor array consists of various sensors that monitor the plant's environment, such as soil moisture, temperature, humidity, and light levels. These sensors provide real-time data to the Edge Node.
-| User Interface (UI) | The user interface allows the user to manage plant profiles, view plant health status and historical data, and configure devices. 
-It communicates with the central storage for data access and uses BLE to provision nearby Edge Nodes.                                   
-| Data Storage (DS) | Stores plant profiles, user-defined settings, and historical sensor data. Acts as the central source of truth for the system and enables remote access to plant data. 
-
+| Edge Node (EN) | The Edge Node is the ESP32 firmware. It reads the sensor array, performs feature engineering and local ML inference, generates care recommendations, and keeps a local history on flash storage (LittleFS).
+It uploads measurements and model metrics to the data storage, polls it for user commands, and is configured through BLE provisioning.
+| Sensor Array (SA)| The sensor array consists of the sensors that monitor the plant's environment: a capacitive soil moisture sensor, a DHT22 temperature/humidity sensor, and an LDR light sensor. These sensors provide real-time data to the Edge Node.
+| User Interface (UI) | The user interface is a mobile app that allows the user to manage plant profiles, view plant health status and historical data, and configure devices.
+It communicates with the data storage for data access and uses BLE to provision nearby Edge Nodes.
+| Data Storage (DS) | A Supabase backend that stores device registrations (`devices` table), plant profiles and settings (`plant_settings`), sensor readings (`plant_readings`), model metrics (`model_metrics`), and device logs (`logs`). Acts as the central source of truth for the system and enables remote access to plant data.
 
 |===
 
@@ -27,26 +26,29 @@ image::../images/component-diagram.svg[]
 <<<
 
 == Messages Between Components
-To showcase how each component is connected to another, the overall message that connects them are defined, see <<Messages between components>>.
+To showcase how each component is connected to another, the main messages that connect them are listed, see <<Messages between components>>.
+The message names correspond to the methods in the implemented software; supporting calls (heartbeats, logging, device deletion) are omitted here and can be found in the sequence diagrams and the API reference.
 
 .Messages between components
 |===
-| Component | Message name | From | To | Description
+| Message name | From | To | Description
 
-| Sensor Array | GetData() | Edge Node | Sensor Array | Retrieves measured sensor data from the sensor array.
+| `ReadPercent()`, `Read()`, `ReadLightLevelPct()` | Edge Node | Sensor Array | Reads the soil moisture, temperature/humidity, and light level.
 
-| Edge Node | Send(`data`) | Edge Node | Data Storage | Sends sensor readings and inferred plant health data to the central storage.
+| `RegisterDevice(deviceId, deviceName)` | Edge Node | Data Storage | Registers the device after successful provisioning.
 
-| User Interface | AddPlant(`plant_info`) | Interface | Data Storage | Stores a new plant profile with user-defined settings such as soil moisture and light preferences.
+| `SendReading(json)` / `SendModelMetrics(json)` | Edge Node | Data Storage | Uploads a monitoring cycle result and its model metrics.
 
-| User Interface | GetPlantData(`plant_id`) | Interface | Data Storage | Requests historical and current plant data for visualization.
+| `FetchProfileSettings(plantLabel)` | Edge Node | Data Storage | Retrieves the assigned plant profile (thresholds and preferences).
 
-| User Interface | DisplayHealthStatus(`health_status`) | Data Storage | Interface | Displays plant health status retrieved from stored data.
+| `CheckTriggerMeasurement()` / `CheckTriggerReset()` | Edge Node | Data Storage | Polls the user command flags every 5 seconds.
 
-| User Interface | ProvisionDevice(`settings`) | Interface | Edge Node (BLE) | Sends plant configuration to a nearby available Edge Node via BLE during setup.
+| insert/update `plant_settings` | Interface | Data Storage | Stores a new or updated plant profile.
 
-| Edge Node | StoreLocalConfig(`settings`) | Edge Node | Edge Node | Stores received configuration locally for autonomous operation.
+| query `plant_readings` | Interface | Data Storage | Requests current and historical plant data for visualization.
 
-| User Interface | GetAvailableDevices() | Interface | Edge Node (BLE) | Scans for nearby unassigned Edge Nodes available for provisioning.
+| set `trigger_measurement` / `trigger_reset` | Interface | Data Storage | Requests an on-demand measurement or removal of a device.
+
+| BLE provisioning (write credentials) | Interface | Edge Node | Discovers an unpaired Edge Node and sends WiFi credentials and cloud configuration during setup.
 
 |===

@@ -25,7 +25,8 @@ This manual covers everything you need to set up the hardware, install the app, 
 * **Rule-based care actions** — the system applies sensor thresholds to decide which actions to recommend (water, reduce temperature, increase light, increase humidity).
 * **Push notifications** — instant alerts when a plant needs attention, plus an optional daily summary.
 * **Multi-plant support** — manage several plants, each with its own device and preference profile.
-* **Cross-platform app** —  iOS, and Windows are supported.
+* **Cross-platform app** — Android, iOS, and Windows are supported. Device pairing requires the Android or Windows app; the iOS app supports monitoring and management only (see <<_platform_differences>>).
+* **App-based device setup** — new devices are paired over Bluetooth (BLE); no credentials are compiled into the firmware.
 
 <<<
 
@@ -122,37 +123,20 @@ NOTE: GPIO 34 and 35 are input-only pins on the ESP32. Do not connect any output
 
 === Flashing the Firmware
 
-The firmware is managed with PlatformIO.
+The firmware is managed with PlatformIO. No credentials or plant configuration need to be entered at build time — all of that is configured later from the app during pairing.
 
 . Install https://platformio.org/[PlatformIO] (VS Code extension or CLI).
 . Navigate to the firmware source:
 +
 [source,shell]
 ----
-cd src/prototype-non-local
+cd src/firmware
 ----
-. Copy the example configuration and fill in your credentials:
+. Build and upload to the device:
 +
 [source,shell]
 ----
-cp platformio.ini.example platformio.ini
-----
-. Open `platformio.ini` and set the following values:
-+
-[source,ini]
-----
-build_flags =
-    -D WIFI_SSID=\"YourNetworkName\"
-    -D WIFI_PASSWORD=\"YourPassword\"
-    -D PLANT_LABEL=\"my_plant\"
-    -D DEVICE_NAME=\"Living Room\"
-----
-. Build and upload to the device (replace `esp32_com3_non_local` with the environment matching your COM port):
-+
-[source,shell]
-----
-platformio run -e esp32_com3_non_local
-platformio run -t upload -e esp32_com3_non_local
+platformio run -e esp32_provisioning -t upload
 ----
 . Verify the device is running correctly:
 +
@@ -161,30 +145,52 @@ platformio run -t upload -e esp32_com3_non_local
 platformio device monitor -b 115200
 ----
 +
-You should see sensor readings and WiFi connection logs printed every 3 hours.
+On first boot the device advertises itself over Bluetooth as `PHM-XXXXXX` and waits to be paired from the app.
 
-TIP: If you have multiple plants, repeat these steps for each ESP32 with a unique `PLANT_LABEL` value. Available environments are `esp32_com3_non_local`, `esp32_com4_non_local`, and `esp32_com5_non_local`.
+TIP: If you have multiple plants, flash each ESP32 with the same firmware — each device generates its own unique identifier and is configured individually during pairing.
 
 <<<
 
 == Mobile App Setup
 
+[[_platform_differences]]
+=== Platform Differences
+
+The app behaves differently per platform. This matters mostly for the initial device setup:
+
+[cols="2,2,4", options="header"]
+|===
+| Platform | Device pairing | Notes
+
+| Android / Windows
+| Full support
+| BLE device scanning and WiFi configuration are available. Use one of these platforms to pair new devices.
+
+| iOS
+| Not available
+| The sideloaded iOS build (free Apple ID) cannot use the BLE device scanning and WiFi network scanning capabilities required for pairing. Once a device has been paired from Android or Windows, the iOS app offers the full monitoring experience: dashboard, charts, preferences, notifications, and device commands all work, since they run through the cloud.
+|===
+
 === Installation
+
+All app releases are published on the https://github.com/caseystijlaart/PlantHealthMonitoring/releases[PlantHealthMonitoring GitHub releases page].
+
+==== Android / Windows
+
+* *Android*: download and install the APK (`phm_app_<version>.apk`) from the releases page (or build it from source, see below).
+* *Windows*: download the release archive (`phm_app_windows_<version>.zip`) from the releases page, extract it, and run `phm_app.exe`.
 
 ==== iOS
 
-Download `phm_app_<version>.ipa` from the `releases/phm/` folder. Full sideloading instructions using Sideloady on Windows are included in `releases/phm/README.adoc`.
+Download `phm_app_<version>.ipa` from the releases page. Full sideloading instructions using Sideloadly on Windows are included with the release.
 
-==== Windows
-
-. Download the release archive from `releases/phm_app_windows_<version>.zip`.
-. Extract the archive and run `phm_app.exe`.
+NOTE: Within the EU, sideloaded apps are not time-limited. Outside the EU, sideloading with a free Apple ID expires after 7 days, after which the app must be re-signed. Device pairing is not available on iOS — pair your devices from the Android or Windows app first.
 
 === Building from Source
 
 [source,shell]
 ----
-cd src/phm_app
+cd src/app
 flutter pub get
 flutter run                  # connected device or emulator
 flutter run -d windows       # Windows desktop
@@ -192,6 +198,18 @@ flutter build apk            # Android release APK
 ----
 
 Flutter 3.x or later is required.
+
+=== Pairing a Device (Android / Windows)
+
+New devices are set up entirely from the app — no firmware changes are needed.
+
+. Power on the freshly flashed ESP32. It advertises itself over Bluetooth as `PHM-XXXXXX`.
+. In the app, choose *Add Device*. The app scans for nearby unpaired devices.
+. Select your device and enter your WiFi network (2.4 GHz) and password.
+. The app transfers the configuration over BLE. The device connects to WiFi and registers itself in the cloud.
+. When the device appears in the app, enter the plant name and care preferences to finish the setup. The device picks up the plant assignment automatically and runs its first measurement.
+
+To remove a device, use *Remove Device* in the app: the device erases its history, credentials, and cloud registration, and reboots into pairing mode so it can be set up again.
 
 <<<
 
@@ -212,7 +230,7 @@ Pull down on the dashboard to force a refresh from the cloud.
 
 === Plant Selector
 
-If you have more than one plant, use the dropdown at the top of the dashboard to switch between them. Each plant is identified by its `PLANT_LABEL` from the firmware.
+If you have more than one plant, use the dropdown at the top of the dashboard to switch between them. Each plant is identified by the plant name entered during setup.
 
 === Sensor Detail
 
@@ -297,15 +315,15 @@ When the risk class is 0 (Healthy), no actions are triggered and the recommendat
 
 === ESP32 is not connecting to WiFi
 
-* Check that `WIFI_SSID` and `WIFI_PASSWORD` are correct in `platformio.ini` and rebuild.
-* The ESP32 only supports 2.4 GHz networks. Make sure you are not connecting to a 5 GHz band.
+* The ESP32 only supports 2.4 GHz networks. Make sure you did not enter a 5 GHz network during pairing.
+* If the credentials were entered incorrectly, remove the device in the app (or wait — a failed first connection automatically resets it to pairing mode) and pair it again.
 * Open the serial monitor (`platformio device monitor -b 115200`) to read detailed connection logs.
 
 === No data appears in the app
 
 * Confirm the ESP32 is powered on and has successfully connected to WiFi (check the serial monitor).
-* The device syncs every 3 hours. Wait for the next sync cycle or reset the device to force an immediate sync.
-* Check that the `PLANT_LABEL` in the firmware matches what the app is looking for.
+* The device measures every 3 hours. Use the measure-now command in the app to request an immediate reading, which the device picks up within a few seconds.
+* Check that a plant has been assigned to the device — an unassigned device does not upload readings.
 
 === App shows stale data
 
@@ -364,17 +382,22 @@ When the risk class is 0 (Healthy), no actions are triggered and the recommendat
 | version | int | Incremented on each save; used for synchronisation.
 |===
 
-=== Firmware Configuration Reference
+=== Device Configuration Reference
 
-[cols="2,1,3", options="header"]
-|===
-| Flag | Default | Description
+All device configuration is provided at runtime during BLE pairing and stored on the device:
 
-| `WIFI_SSID` | — | 2.4 GHz network name.
-| `WIFI_PASSWORD` | — | Network password.
-| `PLANT_LABEL` | — | Unique plant identifier string.
-| `DEVICE_NAME` | — | Friendly name shown in the app.
+[cols="2,2,3", options="header"]
 |===
+| Setting | Provided via | Stored in
+
+| WiFi SSID + password | App during pairing | LittleFS pairing document (`/pairing_state.txt`).
+| Cloud API key + URL | App during pairing | LittleFS pairing document.
+| Device ID | Generated by the device on first boot | Non-volatile storage (NVS).
+| Device name | Derived from the hardware MAC address | —
+| Plant name + preferences | App after pairing | Cloud (`plant_settings`); fetched by the device before each cycle.
+|===
+
+Removing a device marks it unpaired, which erases the stored WiFi credentials by construction.
 
 === ML Models
 
@@ -392,20 +415,12 @@ The care action flags (water / reduce temp / increase light / increase humidity)
 
 This section outlines improvements and extensions that could be added to PlantHealthMonitor in future iterations.
 
-=== Wireless Configuration WiFi/BLE
+=== BLE Data Sync and iOS Pairing
 
-Currently, WiFi credentials and the plant label must be compiled into the firmware before flashing. A more user-friendly approach would be to use a WiFi provisioning flow:
+BLE provisioning is implemented: devices are configured from the app over Bluetooth, with no credentials in the firmware. Two related extensions remain open:
 
-* On first boot, the ESP32 broadcasts its own temporary access point.
-* The user connects to that access point with their phone and opens a simple configuration page.
-* WiFi credentials, plant label, and device name are entered and saved to non-volatile storage on the device.
-* The ESP32 then restarts and connects to the configured network.
-
-This would remove the need for PlatformIO entirely for end users and make it practical to move a device to a different network without reflashing. Frameworks such as ESP-IDF's `wifi_provisioning` component or the Arduino `WiFiManager` library already provide most of this functionality.
-
-As an alternative to the WiFi provisioning flow above, Bluetooth Low Energy (BLE) could be used to configure the device from the Flutter app directly. The app would scan for nearby unconfigured devices, connect over BLE, and push the network credentials and plant label — no access point switching required.
-
-BLE could also serve as a local data channel for users who do not want to connect the device to the internet at all, syncing readings directly to the phone when in range.
+* *BLE data sync* — the BLE channel could also serve as a local data path for users who do not want to connect the device to the internet at all, syncing readings directly to the phone when in range.
+* *iOS pairing support* — with a paid Apple Developer account, the BLE and WiFi scanning capabilities required for pairing could be enabled in the iOS build, removing the current dependency on Android or Windows for device setup.
 
 === Built-in Plant Profiles
 
@@ -432,7 +447,7 @@ The current ML models are trained offline and their weights are exported as C++ 
 
 * Continuously collect labelled sensor data from all deployed devices (with user consent).
 * Retrain the models periodically in the cloud.
-* Push updated weights to devices over OTA.
+* Push updated weights to devices via an over-the-air (OTA) update mechanism, which the current firmware does not yet include.
 
 This would allow the models to improve over time and adapt to a wider variety of plants and environments.
 
@@ -458,5 +473,5 @@ Currently each installation is tied to a single Supabase project. Adding an auth
 | Risk class | An integer (0, 1, or 2) output from the ML model indicating the current health level.
 | Preference band | The user-selected range (low / mid / high) for a sensor that the recommendation engine uses to evaluate readings.
 | Supabase | The managed cloud backend providing PostgreSQL storage and realtime change events.
-| OTA | Over-the-Air firmware update — allows flashing new firmware over WiFi without a USB cable.
+| OTA | Over-the-Air firmware update — flashing new firmware over WiFi without a USB cable. Not supported by the current firmware; listed as a future improvement.
 |===

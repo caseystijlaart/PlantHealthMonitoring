@@ -1,12 +1,12 @@
 = System Description
-The plant health monitoring system is an embedded solution designed to monitor environmental conditions and provide feedback on plant health. 
-The system is centered around an ESP32 microcontroller, which collects data from sensors such as soil moisture, temperature, and humidity.
+The plant health monitoring system is an embedded solution designed to monitor environmental conditions and provide feedback on plant health.
+The system is centered around an ESP32 microcontroller, which collects data from sensors for soil moisture, temperature, humidity, and light level.
 
-The ESP32 processes this data locally using a lightweight machine learning model to determine the plant’s health status (e.g., healthy, moderate stress, high stress). 
-The results are presented to the user through a simple interface, allowing monitoring and basic interaction, such as setting plant-specific preferences.
+The ESP32 processes this data locally: each monitoring cycle builds a feature vector from the recent sensor history, runs a lightweight machine learning model to classify the plant's health status (healthy, moderate stress, high stress), predicts the time remaining until watering is needed, and generates concrete care recommendations (water, reduce temperature, increase light).
+Results are stored locally on the device and uploaded to a cloud backend (Supabase), from which a mobile app presents them to the user.
 
-The system follows a modular architecture consisting of sensors (data collection), the ESP32 (processing), and a user interface (visualization). 
-It is designed to operate efficiently on edge hardware with minimal external dependencies, while remaining extensible for future improvements.
+The system follows a modular architecture consisting of a sensor array (data collection), the ESP32 edge node (processing and ML inference), a cloud data storage (central source of truth), and a mobile user interface (visualization and configuration).
+New devices are paired through BLE provisioning from the app, after which the edge node operates autonomously: it runs a scheduled monitoring cycle every three hours and polls the cloud every five seconds for user-issued commands such as an on-demand measurement or a factory reset.
 
 == Extensions
 The following extensions are categorized using the MoSCoW prioritization method to define which features are essential, desirable, optional, or out of scope for the current version of the plant health monitoring system.
@@ -14,32 +14,35 @@ The following extensions are categorized using the MoSCoW prioritization method 
 === Must
 These are the core extensions or capabilities required for the system to meet its primary objective.
 
-* The system must monitor key environmental factors relevant to plant health, such as soil moisture, temperature, and humidity.
+* The system must monitor key environmental factors relevant to plant health: soil moisture, temperature, humidity, and light level.
 * The system must process sensor data and provide plant health feedback to the user.
 * The system must present the measured values and plant status through a user interface.
 * The system must operate on the ESP32 platform as the main embedded controller.
 * The system must support a basic warning or alert when plant conditions fall outside acceptable ranges.
-* The system should provide clearer interpretation of plant condition, for example by classifying status as healthy, moderate stress, or high stress.
+* The system must classify the plant condition as healthy, moderate stress, or high stress.
 
+<<<
+    
 === Should
-These features are important and would significantly improve the system, but the system can still function without them in the first version.
+These features are important and significantly improve the system.
 
 * The system should allow the user to enter plant-specific preferences, such as whether a plant prefers low, medium, or high moisture.
-* The system should store historical sensor readings for later review.
-* The system could support multiple plants instead of only one monitored plant.
+* The system should store historical sensor readings for later review, both locally on the device and in the cloud.
+* The system should support multiple plants and multiple edge nodes per user.
+* The system should provide personalized recommendations for plant care actions, including a prediction of when watering will next be needed.
+* The system should estimate an optimized measurement interval and the resulting power saving based on the predicted plant needs.
 
 === Could
 These are optional enhancements that may improve usability or functionality if time and resources allow.
 
-* The system could include additional sensors, such as light intensity or air quality sensors.
+* The system could include additional sensors, such as air quality sensors.
 * The system could provide trend visualization, such as graphs of moisture or temperature over time.
-* The system could include personalized recommendations for plant care actions.
+* The system could automatically apply the optimized measurement interval instead of only reporting it.
 
 === Won't
 These items are intentionally excluded from the current scope of the project.
 
-* The system won’t include full automation of plant care, such as automatic watering, in the current version.
-* The system won’t use a complex cloud backend as part of the initial prototype.
-* The system won’t support large-scale commercial greenhouse management.
-* The system won’t include advanced computer vision or camera-based plant disease detection.
-* The system won’t aim to support every plant species with fully customized biological models.
+* The system won't include full automation of plant care, such as automatic watering, in the current version.
+* The system won't support large-scale commercial greenhouse management.
+* The system won't include advanced computer vision or camera-based plant disease detection.
+* The system won't aim to support every plant species with fully customized biological models.
