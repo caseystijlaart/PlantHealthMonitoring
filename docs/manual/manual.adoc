@@ -182,9 +182,16 @@ All app releases are published on the https://github.com/caseystijlaart/PlantHea
 
 ==== iOS
 
-Download `phm_app_<version>.ipa` from the releases page. Full sideloading instructions using Sideloadly on Windows are included with the release.
+Download `phm_v<version>.ipa` from the https://github.com/caseystijlaart/PlantHealthMonitoring/releases[GitHub Releases page]. Full sideloading instructions using Sideloady on Windows are included in link:ios-sideloading.adoc[ios-sideloading.adoc].
 
-NOTE: Within the EU, sideloaded apps are not time-limited. Outside the EU, sideloading with a free Apple ID expires after 7 days, after which the app must be re-signed. Device pairing is not available on iOS — pair your devices from the Android or Windows app first.
+==== Android
+
+Download `phm_v<version>.apk` from the https://github.com/caseystijlaart/PlantHealthMonitoring/releases[GitHub Releases page] and install it (allow installation from unknown sources when prompted).
+
+==== Windows
+
+. Download `phm_v<version>_win64.zip` (portable) or `phm_v<version>.msix` (installer) from the https://github.com/caseystijlaart/PlantHealthMonitoring/releases[GitHub Releases page].
+. Extract the archive and run `phm_app.exe`.
 
 === Building from Source
 
